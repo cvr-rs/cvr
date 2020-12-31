@@ -40,7 +40,7 @@ fn into_raw_parts<T>(v: Vec<T>) -> (*mut T, usize, usize) {
 ///
 /// Returns a `Result` that's either the 8-bit `RGBA` data or a `cvr::png::Error` type.
 ///
-pub fn read_rgba<Reader>(r: Reader) -> Result<crate::rgba::Image<u8>, Error>
+pub fn read_rgba8<Reader>(r: Reader) -> Result<crate::rgba::Image<u8>, Error>
 where
     Reader: std::io::Read,
 {
@@ -122,14 +122,15 @@ where
 /// Returns either a wrapped `::png::EncodingError` or a truthy `Result`.
 ///
 #[allow(clippy::cast_possible_truncation)]
-pub fn write_rgba<Writer>(
+pub fn write_rgba8<Writer, Iter>(
     writer: Writer,
-    img: crate::rgba::Iter<'_, u8>,
+    img: Iter,
     width: usize,
     height: usize,
 ) -> Result<(), Error>
 where
     Writer: std::io::Write,
+    Iter: std::iter::Iterator<Item = [u8; 4]>,
 {
     let mut png_encoder = ::png::Encoder::new(writer, width as u32, height as u32);
     png_encoder.set_color(::png::ColorType::RGBA);
@@ -147,6 +148,46 @@ where
             chunk[1] = std::mem::MaybeUninit::<u8>::new(g);
             chunk[2] = std::mem::MaybeUninit::<u8>::new(b);
             chunk[3] = std::mem::MaybeUninit::<u8>::new(a);
+        });
+
+    let (ptr, len, cap) = into_raw_parts(buf);
+    let buf = unsafe { Vec::<u8>::from_raw_parts(ptr as *mut u8, len, cap) };
+
+    Ok(png_writer.write_image_data(&buf)?)
+}
+
+/// `write_grayalpha` attempts to write the provided grayscale-alpha image to the supplied
+/// `std::io::Write` object using the specified width and height.
+///
+/// # Errors
+///
+/// Returns either a wrapped `::png::EncodingError` or a truthy `Result`.
+///
+#[allow(clippy::cast_possible_truncation)]
+pub fn write_grayalpha8<Writer, Iter>(
+    writer: Writer,
+    img: Iter,
+    width: usize,
+    height: usize,
+) -> Result<(), Error>
+where
+    Writer: std::io::Write,
+    Iter: std::iter::Iterator<Item = [u8; 2]>,
+{
+    let mut png_encoder = ::png::Encoder::new(writer, width as u32, height as u32);
+    png_encoder.set_color(::png::ColorType::GrayscaleAlpha);
+    png_encoder.set_depth(::png::BitDepth::Eight);
+    let mut png_writer = png_encoder.write_header()?;
+
+    let num_channels = 2;
+    let count = num_channels * width * height;
+
+    let mut buf = vec![std::mem::MaybeUninit::<u8>::uninit(); count];
+    buf.chunks_exact_mut(num_channels)
+        .zip(img)
+        .for_each(|(chunk, [v, a])| {
+            chunk[0] = std::mem::MaybeUninit::<u8>::new(v);
+            chunk[1] = std::mem::MaybeUninit::<u8>::new(a);
         });
 
     let (ptr, len, cap) = into_raw_parts(buf);

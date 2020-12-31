@@ -4,6 +4,19 @@ extern crate cvr;
 
 use cvr::rgb::iter::{LinearGrayIterator, LinearSRGBIterator, SRGBLinearIterator};
 
+fn float_eq(a: f32, b: f32) -> bool {
+    (a - b).abs() < std::f32::EPSILON * (a.max(b))
+}
+
+fn float_array_eq(actual: &[f32], expected: &[f32]) -> bool {
+    actual
+        .iter()
+        .zip(expected.iter())
+        .fold(true, |equal: bool, (a, b)| -> bool {
+            equal && float_eq(*a, *b)
+        })
+}
+
 #[test]
 fn srgb_to_linear_to_srgb() {
     let r = [1_u8, 2, 3];
@@ -36,12 +49,20 @@ fn srgb_to_linear_to_srgb() {
             blue_srgb[idx] = b;
         });
 
-    assert_eq!(red_linear, [0.000_303_527, 0.000_607_054, 0.000_910_581_03]);
-    assert_eq!(
-        green_linear,
-        [0.001_214_108, 0.001_517_635, 0.001_821_162_1]
-    );
-    assert_eq!(blue_linear, [0.002_124_689, 0.002_428_216, 0.002_731_743]);
+    assert!(float_array_eq(
+        &red_linear,
+        &[0.000_303_527, 0.000_607_054, 0.000_910_581_03]
+    ));
+
+    assert!(float_array_eq(
+        &green_linear,
+        &[0.001_214_108, 0.001_517_635, 0.001_821_162_1]
+    ));
+
+    assert!(float_array_eq(
+        &blue_linear,
+        &[0.002_124_689, 0.002_428_216, 0.002_731_743]
+    ));
 
     assert_eq!(red_srgb, r);
     assert_eq!(green_srgb, g);
@@ -59,7 +80,10 @@ fn srgb_to_gray() {
         .linear_to_gray()
         .collect();
 
-    assert_eq!(gray, [0.001_086_22, 0.001_389_747, 0.001_693_273_9]);
+    assert!(float_array_eq(
+        &gray,
+        &[0.001_086_22, 0.001_389_747, 0.001_693_273_9]
+    ));
 
     let gray: Vec<u8> = cvr::rgb::Iter::new(&r, &g, &b)
         .srgb_to_linear()

@@ -1,5 +1,13 @@
+//! `png` contains routines that enable users to read and write `PNG` files. It wraps the `png`
+//! crate and returns errors directly from the library where further documentation can be found on
+//! the precise nature of the `DecodingError` and the `EncodingError`.
+//!
+
 extern crate png;
 
+/// `Error` wraps a decoding/encoding error directly from the underlying `png` crate dependency or
+/// conveys that the supplied `Reader` does not match the expected format.
+///
 #[derive(std::fmt::Debug)]
 pub enum Error {
     Decoding(::png::DecodingError),
@@ -32,9 +40,9 @@ fn into_raw_parts<T>(v: Vec<T>) -> (*mut T, usize, usize) {
 ///
 /// Returns a `Result` that's either the 8-bit `RGBA` data or a `cvr::png::Error` type.
 ///
-pub fn read_rgba<R>(r: R) -> Result<crate::rgb::RGBA<u8>, Error>
+pub fn read_rgba<Reader>(r: Reader) -> Result<crate::rgba::Image<u8>, Error>
 where
-    R: std::io::Read,
+    Reader: std::io::Read,
 {
     let (output_info, mut png_reader) = ::png::Decoder::new(r).read_info()?;
 
@@ -96,7 +104,7 @@ where
     let b = unsafe { Vec::<u8>::from_raw_parts(b_ptr as *mut u8, b_len, b_cap) };
     let a = unsafe { Vec::<u8>::from_raw_parts(a_ptr as *mut u8, a_len, a_cap) };
 
-    Ok(crate::rgb::RGBA {
+    Ok(crate::rgba::Image {
         r,
         g,
         b,
@@ -106,37 +114,39 @@ where
     })
 }
 
-/// `write_rgba` attempts to write the provided `RGBA` image to the supplied `std::io::Writer`
-/// object.
+/// `write_rgba` attempts to write the provided `RGBA` image to the supplied `std::io::Write`
+/// object using the specified width and height.
 ///
 /// # Errors
 ///
 /// Returns either a wrapped `::png::EncodingError` or a truthy `Result`.
 ///
 #[allow(clippy::cast_possible_truncation)]
-pub fn write_rgba<W>(w: W, img: &crate::rgb::RGBA<u8>) -> Result<(), Error>
+pub fn write_rgba<Writer>(
+    writer: Writer,
+    img: crate::rgba::Iter<'_, u8>,
+    width: usize,
+    height: usize,
+) -> Result<(), Error>
 where
-    W: std::io::Write,
+    Writer: std::io::Write,
 {
-    let mut png_encoder = ::png::Encoder::new(w, img.w as u32, img.h as u32);
+    let mut png_encoder = ::png::Encoder::new(writer, width as u32, height as u32);
     png_encoder.set_color(::png::ColorType::RGBA);
     png_encoder.set_depth(::png::BitDepth::Eight);
     let mut png_writer = png_encoder.write_header()?;
 
     let num_channels = 4;
-    let count = num_channels * img.w * img.h;
+    let count = num_channels * width * height;
 
     let mut buf = vec![std::mem::MaybeUninit::<u8>::uninit(); count];
     buf.chunks_exact_mut(num_channels)
-        .zip(img.r.iter())
-        .zip(img.g.iter())
-        .zip(img.b.iter())
-        .zip(img.a.iter())
-        .for_each(|((((chunk, r), g), b), a)| {
-            chunk[0] = std::mem::MaybeUninit::<u8>::new(*r);
-            chunk[1] = std::mem::MaybeUninit::<u8>::new(*g);
-            chunk[2] = std::mem::MaybeUninit::<u8>::new(*b);
-            chunk[3] = std::mem::MaybeUninit::<u8>::new(*a);
+        .zip(img)
+        .for_each(|(chunk, [r, g, b, a])| {
+            chunk[0] = std::mem::MaybeUninit::<u8>::new(r);
+            chunk[1] = std::mem::MaybeUninit::<u8>::new(g);
+            chunk[2] = std::mem::MaybeUninit::<u8>::new(b);
+            chunk[3] = std::mem::MaybeUninit::<u8>::new(a);
         });
 
     let (ptr, len, cap) = into_raw_parts(buf);

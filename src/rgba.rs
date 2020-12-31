@@ -98,7 +98,7 @@ where
 /// let b = vec![7, 8, 9];
 /// let a = vec![255, 255, 255];
 ///
-/// let rgb_iter = cvr::rgb::Iter::new(&r, &g, &b, &a);
+/// let rgb_iter = cvr::rgba::Iter::new(&r, &g, &b, &a);
 /// ```
 ///
 impl<'a, N> Iter<'a, N>

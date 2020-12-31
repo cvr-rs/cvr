@@ -22,8 +22,8 @@ fn test_grayscale_alpha_png() {
         .srgb_to_linear()
         .linear_to_gray()
         .map(cvr::rgb::linear_to_srgb)
-        .zip(img.a())
-        .map(|(a, b)| [a, *b]);
+        .zip(img.a().iter().copied())
+        .map(|(x, y)| [x, y]);
 
     cvr::png::write_grayalpha8(copy_img, iter, img.width(), img.height()).unwrap();
 }

@@ -1,4 +1,4 @@
-//! `png` contains routines that enable users to read and write `PNG` files. It wraps the `png`
+//! `png` contains routines that enable users to read and write `PNG` files. It wraps the [`png`](https://crates.io/crates/png)
 //! crate and returns errors directly from the library where further documentation can be found on
 //! the precise nature of the `DecodingError` and the `EncodingError`.
 //!
@@ -33,7 +33,7 @@ fn into_raw_parts<T>(v: Vec<T>) -> (*mut T, usize, usize) {
     (m.as_mut_ptr(), m.len(), m.capacity())
 }
 
-/// `read_rgba` claims ownership of the supplied `std::io::Read` type and attempts to decode an
+/// `read_rgba8` claims ownership of the supplied `std::io::Read` type and attempts to decode an
 /// 8-bit `RGBA` image.
 ///
 /// # Errors
@@ -114,7 +114,87 @@ where
     })
 }
 
-/// `write_rgba` attempts to write the provided `RGBA` image to the supplied `std::io::Write`
+/// `read_rgb8` claims ownership of the supplied `std::io::Read` type and attempts to decode an
+/// 8-bit `RGB` image.
+///
+/// # Errors
+///
+/// Returns a `Result` that's either the 8-bit `RGB` data or a `cvr::png::Error` type.
+///
+pub fn read_rgb8<Reader>(r: Reader) -> Result<crate::rgb::Image<u8>, Error>
+where
+    Reader: std::io::Read,
+{
+    let (output_info, mut png_reader) = ::png::Decoder::new(r).read_info()?;
+
+    let ::png::OutputInfo {
+        height,
+        width,
+        color_type,
+        bit_depth,
+        ..
+    } = output_info;
+
+    if color_type != ::png::ColorType::RGBA && color_type != ::png::ColorType::RGB {
+        return Err(Error::InvalidColorType);
+    }
+
+    if bit_depth != ::png::BitDepth::Eight {
+        return Err(Error::InvalidBitDepth);
+    }
+
+    let height = height as usize;
+    let width = width as usize;
+    let size = height * width;
+
+    let mut r = vec![std::mem::MaybeUninit::<u8>::uninit(); size];
+    let mut g = vec![std::mem::MaybeUninit::<u8>::uninit(); size];
+    let mut b = vec![std::mem::MaybeUninit::<u8>::uninit(); size];
+
+    let mut row_idx = 0;
+
+    let num_channels = if color_type == ::png::ColorType::RGBA {
+        4
+    } else {
+        3
+    };
+
+    let num_cols = width;
+    while let Some(row) = png_reader.next_row()? {
+        let idx = row_idx * num_cols;
+        let end_idx = idx + num_cols;
+
+        row.chunks_exact(num_channels)
+            .zip(r[idx..end_idx].iter_mut())
+            .zip(g[idx..end_idx].iter_mut())
+            .zip(b[idx..end_idx].iter_mut())
+            .for_each(|(((chunk, r), g), b)| {
+                *r = std::mem::MaybeUninit::new(chunk[0]);
+                *g = std::mem::MaybeUninit::new(chunk[1]);
+                *b = std::mem::MaybeUninit::new(chunk[2]);
+            });
+
+        row_idx += 1;
+    }
+
+    let (r_ptr, r_len, r_cap) = into_raw_parts(r);
+    let (g_ptr, g_len, g_cap) = into_raw_parts(g);
+    let (b_ptr, b_len, b_cap) = into_raw_parts(b);
+
+    let r = unsafe { Vec::<u8>::from_raw_parts(r_ptr as *mut u8, r_len, r_cap) };
+    let g = unsafe { Vec::<u8>::from_raw_parts(g_ptr as *mut u8, g_len, g_cap) };
+    let b = unsafe { Vec::<u8>::from_raw_parts(b_ptr as *mut u8, b_len, b_cap) };
+
+    Ok(crate::rgb::Image {
+        r,
+        g,
+        b,
+        h: height,
+        w: width,
+    })
+}
+
+/// `write_rgba8` attempts to write the provided `RGBA` image to the supplied `std::io::Write`
 /// object using the specified width and height.
 ///
 /// # Errors
@@ -156,7 +236,48 @@ where
     Ok(png_writer.write_image_data(&buf)?)
 }
 
-/// `write_grayalpha` attempts to write the provided grayscale-alpha image to the supplied
+/// `write_rgb8` attempts to write the provided `RGB` image to the supplied `std::io::Write`
+/// object using the specified width and height.
+///
+/// # Errors
+///
+/// Returns either a wrapped `::png::EncodingError` or a truthy `Result`.
+///
+#[allow(clippy::cast_possible_truncation)]
+pub fn write_rgb8<Writer, Iter>(
+    writer: Writer,
+    img: Iter,
+    width: usize,
+    height: usize,
+) -> Result<(), Error>
+where
+    Writer: std::io::Write,
+    Iter: std::iter::Iterator<Item = [u8; 3]>,
+{
+    let mut png_encoder = ::png::Encoder::new(writer, width as u32, height as u32);
+    png_encoder.set_color(::png::ColorType::RGB);
+    png_encoder.set_depth(::png::BitDepth::Eight);
+    let mut png_writer = png_encoder.write_header()?;
+
+    let num_channels = 3;
+    let count = num_channels * width * height;
+
+    let mut buf = vec![std::mem::MaybeUninit::<u8>::uninit(); count];
+    buf.chunks_exact_mut(num_channels)
+        .zip(img)
+        .for_each(|(chunk, [r, g, b])| {
+            chunk[0] = std::mem::MaybeUninit::<u8>::new(r);
+            chunk[1] = std::mem::MaybeUninit::<u8>::new(g);
+            chunk[2] = std::mem::MaybeUninit::<u8>::new(b);
+        });
+
+    let (ptr, len, cap) = into_raw_parts(buf);
+    let buf = unsafe { Vec::<u8>::from_raw_parts(ptr as *mut u8, len, cap) };
+
+    Ok(png_writer.write_image_data(&buf)?)
+}
+
+/// `write_grayalpha8` attempts to write the provided grayscale-alpha image to the supplied
 /// `std::io::Write` object using the specified width and height.
 ///
 /// # Errors

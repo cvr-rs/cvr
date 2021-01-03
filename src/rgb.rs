@@ -162,10 +162,75 @@ pub fn linear_to_srgb(u: f32) -> u8 {
     (255.0 * u).round() as u8
 }
 
+/// `linear_to_gray` takes the provided linearized `RGB` pixel value and converts it to its
+/// corresponding [luminance in the XYZ color space](https://en.wikipedia.org/wiki/CIE_1931_color_space#Meaning_of_X,_Y_and_Z).
+///
 #[must_use]
 #[allow(clippy::mistyped_literal_suffixes)]
 pub fn linear_to_gray(rgb: [f32; 3]) -> f32 {
     0.212_639 * rgb[0] + 0.715_168_7 * rgb[1] + 0.072_192_32 * rgb[2]
+}
+
+/// `Image` represents any `RGB` image. Internally, it stores each channel as an independent
+/// allocation which enables such things as constant-time channel swapping along with making the
+/// data cheaper to copy to a GPU which expects `CHW` ordering vs the packed format `HWC`.
+///
+pub struct Image<T>
+where
+    T: crate::Numeric,
+{
+    pub(super) r: Vec<T>,
+    pub(super) g: Vec<T>,
+    pub(super) b: Vec<T>,
+    pub(super) h: usize,
+    pub(super) w: usize,
+}
+
+impl<T> Image<T>
+where
+    T: crate::Numeric,
+{
+    /// `r` returns an immutable reference to the image's red channel as a `&[T]`.
+    ///
+    #[must_use]
+    pub fn r(&self) -> &[T] {
+        self.r.as_slice()
+    }
+
+    /// `g` returns an immutable reference to the image's green channel as a `&[T]`.
+    ///
+    #[must_use]
+    pub fn g(&self) -> &[T] {
+        self.g.as_slice()
+    }
+
+    /// `b` returns an immutable reference to the image's blue channel as a `&[T]`.
+    ///
+    #[must_use]
+    pub fn b(&self) -> &[T] {
+        self.b.as_slice()
+    }
+
+    /// `width` returns the number of columns in the image.
+    ///
+    #[must_use]
+    pub fn width(&self) -> usize {
+        self.w
+    }
+
+    /// `height` returns the number of rows in the image.
+    ///
+    #[must_use]
+    pub fn height(&self) -> usize {
+        self.h
+    }
+
+    /// `rgb_iter` returns a `cvr::rgb::Iter` to the underlying image data.
+    ///
+    #[must_use]
+    pub fn rgb_iter(&self) -> crate::rgb::Iter<'_, T> {
+        crate::rgb::Iter::new(&self.r, &self.g, &self.b)
+    }
 }
 
 /// `Iter` enables the simultaneous traversal of 3 separate channels of image data. It works
@@ -181,21 +246,21 @@ where
     b: std::slice::Iter<'a, N>,
 }
 
-/// `new` constructs a new `Iter` using the backing `&[N]` of the types passed in by the user.
-///
-/// # Example
-/// ```
-/// let r = vec![1, 2, 3];
-/// let g = vec![4, 5, 6];
-/// let b = vec![7, 8, 9];
-///
-/// let rgb_iter = cvr::rgb::Iter::new(&r, &g, &b);
-/// ```
-///
 impl<'a, N> Iter<'a, N>
 where
     N: crate::Numeric,
 {
+    /// `new` constructs a new `Iter` using the backing `&[N]` of the types passed in by the user.
+    ///
+    /// # Example
+    /// ```
+    /// let r = vec![1, 2, 3];
+    /// let g = vec![4, 5, 6];
+    /// let b = vec![7, 8, 9];
+    ///
+    /// let rgb_iter = cvr::rgb::Iter::new(&r, &g, &b);
+    /// ```
+    ///
     pub fn new<R>(r: &'a R, g: &'a R, b: &'a R) -> Self
     where
         R: std::convert::AsRef<[N]>,
@@ -306,6 +371,9 @@ pub mod iter {
 
     impl<Iter> LinearSRGBIterator for Iter where Iter: std::iter::Iterator<Item = [f32; 3]> {}
 
+    /// `LinearToGray` lazily converts linearized `f32` pixel values to their corresponding
+    /// [luminance in the CIE XYZ color space](https://en.wikipedia.org/wiki/CIE_1931_color_space#Meaning_of_X,_Y_and_Z).
+    ///
     pub struct LinearToGray<Iter>
     where
         Iter: std::iter::Iterator<Item = [f32; 3]>,
@@ -324,6 +392,9 @@ pub mod iter {
         }
     }
 
+    /// `LinearGrayIterator` is the public trait implemented for all `Iterator` types that enables
+    /// the adapter `linear_to_gray()` to be invoked.
+    ///
     pub trait LinearGrayIterator: std::iter::Iterator<Item = [f32; 3]>
     where
         Self: Sized,

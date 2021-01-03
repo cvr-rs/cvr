@@ -3,12 +3,21 @@ extern crate cvr;
 use cvr::rgb::iter::{LinearGrayIterator, SRGBLinearIterator};
 
 #[test]
-fn test_png_io() {
+fn test_png_io_rgba() {
     let parrot_img = std::fs::File::open("tests/images/parrot.png").unwrap();
-    let copy_img = std::fs::File::create("tests/images/parrot-copy.png").unwrap();
+    let copy_img = std::fs::File::create("tests/images/parrot-rgba-copy.png").unwrap();
 
     let img = cvr::png::read_rgba8(parrot_img).unwrap();
     cvr::png::write_rgba8(copy_img, img.rgba_iter(), img.width(), img.height()).unwrap();
+}
+
+#[test]
+fn test_png_io_rgb() {
+    let parrot_img = std::fs::File::open("tests/images/parrot.png").unwrap();
+    let copy_img = std::fs::File::create("tests/images/parrot-rgb-copy.png").unwrap();
+
+    let img = cvr::png::read_rgb8(parrot_img).unwrap();
+    cvr::png::write_rgb8(copy_img, img.rgb_iter(), img.width(), img.height()).unwrap();
 }
 
 #[test]

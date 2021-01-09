@@ -4,6 +4,7 @@
 
 #![warn(clippy::pedantic)]
 
+pub mod convert;
 pub mod png;
 pub mod rgb;
 pub mod rgba;

@@ -2,7 +2,7 @@
 
 extern crate cvr;
 
-use cvr::rgb::iter::{LinearGrayIterator, LinearSRGBIterator, SRGBLinearIterator};
+use cvr::convert::iter::{LinearGrayIterator, LinearSRGBIterator, SRGBLinearIterator};
 
 fn float_eq(a: f32, b: f32) -> bool {
     (a - b).abs() < std::f32::EPSILON * (a.max(b))
@@ -88,8 +88,16 @@ fn srgb_to_gray() {
     let gray: Vec<u8> = cvr::rgb::Iter::new(&r, &g, &b)
         .srgb_to_linear()
         .linear_to_gray()
-        .map(cvr::rgb::linear_to_srgb)
+        .map(cvr::convert::linear_to_srgb)
         .collect();
 
     assert_eq!(gray, [4, 5, 6]);
+}
+
+#[test]
+fn rgb_to_hsv() {
+    let rgb = [0.19, 0.38, 0.38];
+    let hsv = cvr::convert::linear_to_hsv(rgb);
+
+    assert!(float_array_eq(&hsv, &[180.0, 0.5, 0.38]));
 }

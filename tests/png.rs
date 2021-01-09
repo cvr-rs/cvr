@@ -1,6 +1,6 @@
 extern crate cvr;
 
-use cvr::rgb::iter::{LinearGrayIterator, SRGBLinearIterator};
+use cvr::convert::iter::{LinearGrayIterator, LinearSRGBIterator, SRGBLinearIterator};
 
 #[test]
 fn test_png_io_rgba() {
@@ -30,9 +30,28 @@ fn test_grayscale_alpha_png() {
         .rgb_iter()
         .srgb_to_linear()
         .linear_to_gray()
-        .map(cvr::rgb::linear_to_srgb)
+        .map(cvr::convert::linear_to_srgb)
         .zip(img.a().iter().copied())
         .map(|(x, y)| [x, y]);
 
     cvr::png::write_grayalpha8(copy_img, iter, img.width(), img.height()).unwrap();
+}
+
+#[test]
+fn test_png_hsv() {
+    let parrot_img = std::fs::File::open("tests/images/parrot.png").unwrap();
+    let copy_img = std::fs::File::create("tests/images/parrot-hsv.png").unwrap();
+
+    let img = cvr::png::read_rgba8(parrot_img).unwrap();
+    let a = img.a();
+    let iter = img
+        .rgb_iter()
+        .srgb_to_linear()
+        .map(|[r, g, b]| cvr::convert::linear_to_hsv([r, g, b]))
+        .map(|[h, s, v]| [h / 360.0, s, v])
+        .linear_to_srgb()
+        .zip(a.iter().copied())
+        .map(|([r, g, b], a)| [r, g, b, a]);
+
+    cvr::png::write_rgba8(copy_img, iter, img.width(), img.height()).unwrap();
 }

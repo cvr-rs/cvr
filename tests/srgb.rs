@@ -101,3 +101,11 @@ fn rgb_to_hsv() {
 
     assert!(float_array_eq(&hsv, &[180.0, 0.5, 0.38]));
 }
+
+#[test]
+fn hsv_to_rgb() {
+    let hsv = [180.0, 0.5, 0.38];
+    let rgb = cvr::convert::hsv_to_linear(hsv);
+
+    assert!(float_array_eq(&rgb, &[0.19, 0.38, 0.38]));
+}

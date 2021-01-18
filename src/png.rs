@@ -66,10 +66,10 @@ where
     let width = width as usize;
     let size = height * width;
 
-    let mut r = vec![std::mem::MaybeUninit::<u8>::uninit(); size];
-    let mut g = vec![std::mem::MaybeUninit::<u8>::uninit(); size];
-    let mut b = vec![std::mem::MaybeUninit::<u8>::uninit(); size];
-    let mut a = vec![std::mem::MaybeUninit::<u8>::uninit(); size];
+    let mut r = minivec::MiniVec::<u8>::with_capacity(size);
+    let mut g = minivec::MiniVec::<u8>::with_capacity(size);
+    let mut b = minivec::MiniVec::<u8>::with_capacity(size);
+    let mut a = minivec::MiniVec::<u8>::with_capacity(size);
 
     let mut row_idx = 0;
 
@@ -80,10 +80,10 @@ where
         let end_idx = idx + num_cols;
 
         row.chunks_exact(num_channels)
-            .zip(r[idx..end_idx].iter_mut())
-            .zip(g[idx..end_idx].iter_mut())
-            .zip(b[idx..end_idx].iter_mut())
-            .zip(a[idx..end_idx].iter_mut())
+            .zip(r.spare_capacity_mut()[idx..end_idx].iter_mut())
+            .zip(g.spare_capacity_mut()[idx..end_idx].iter_mut())
+            .zip(b.spare_capacity_mut()[idx..end_idx].iter_mut())
+            .zip(a.spare_capacity_mut()[idx..end_idx].iter_mut())
             .for_each(|((((chunk, r), g), b), a)| {
                 *r = std::mem::MaybeUninit::new(chunk[0]);
                 *g = std::mem::MaybeUninit::new(chunk[1]);
@@ -94,15 +94,12 @@ where
         row_idx += 1;
     }
 
-    let (r_ptr, r_len, r_cap) = into_raw_parts(r);
-    let (g_ptr, g_len, g_cap) = into_raw_parts(g);
-    let (b_ptr, b_len, b_cap) = into_raw_parts(b);
-    let (a_ptr, a_len, a_cap) = into_raw_parts(a);
-
-    let r = unsafe { Vec::<u8>::from_raw_parts(r_ptr as *mut u8, r_len, r_cap) };
-    let g = unsafe { Vec::<u8>::from_raw_parts(g_ptr as *mut u8, g_len, g_cap) };
-    let b = unsafe { Vec::<u8>::from_raw_parts(b_ptr as *mut u8, b_len, b_cap) };
-    let a = unsafe { Vec::<u8>::from_raw_parts(a_ptr as *mut u8, a_len, a_cap) };
+    unsafe {
+        r.set_len(size);
+        g.set_len(size);
+        b.set_len(size);
+        a.set_len(size);
+    }
 
     Ok(crate::rgba::Image {
         r,
@@ -147,9 +144,9 @@ where
     let width = width as usize;
     let size = height * width;
 
-    let mut r = vec![std::mem::MaybeUninit::<u8>::uninit(); size];
-    let mut g = vec![std::mem::MaybeUninit::<u8>::uninit(); size];
-    let mut b = vec![std::mem::MaybeUninit::<u8>::uninit(); size];
+    let mut r = minivec::MiniVec::<u8>::with_capacity(size);
+    let mut g = minivec::MiniVec::<u8>::with_capacity(size);
+    let mut b = minivec::MiniVec::<u8>::with_capacity(size);
 
     let mut row_idx = 0;
 
@@ -165,9 +162,9 @@ where
         let end_idx = idx + num_cols;
 
         row.chunks_exact(num_channels)
-            .zip(r[idx..end_idx].iter_mut())
-            .zip(g[idx..end_idx].iter_mut())
-            .zip(b[idx..end_idx].iter_mut())
+            .zip(r.spare_capacity_mut()[idx..end_idx].iter_mut())
+            .zip(g.spare_capacity_mut()[idx..end_idx].iter_mut())
+            .zip(b.spare_capacity_mut()[idx..end_idx].iter_mut())
             .for_each(|(((chunk, r), g), b)| {
                 *r = std::mem::MaybeUninit::new(chunk[0]);
                 *g = std::mem::MaybeUninit::new(chunk[1]);
@@ -177,13 +174,11 @@ where
         row_idx += 1;
     }
 
-    let (r_ptr, r_len, r_cap) = into_raw_parts(r);
-    let (g_ptr, g_len, g_cap) = into_raw_parts(g);
-    let (b_ptr, b_len, b_cap) = into_raw_parts(b);
-
-    let r = unsafe { Vec::<u8>::from_raw_parts(r_ptr as *mut u8, r_len, r_cap) };
-    let g = unsafe { Vec::<u8>::from_raw_parts(g_ptr as *mut u8, g_len, g_cap) };
-    let b = unsafe { Vec::<u8>::from_raw_parts(b_ptr as *mut u8, b_len, b_cap) };
+    unsafe {
+        r.set_len(size);
+        g.set_len(size);
+        b.set_len(size);
+    }
 
     Ok(crate::rgb::Image {
         r,

@@ -1,3 +1,5 @@
+extern crate minivec;
+
 /// `Image` represents any `RGBA` image. Internally, it stores each channel as an independent
 /// allocation which enables such things as constant-time channel swapping along with making the
 /// data cheaper to copy to a GPU which expects `CHW` ordering vs the packed format `HWC`.
@@ -6,10 +8,10 @@ pub struct Image<T>
 where
     T: crate::Numeric,
 {
-    pub(super) r: Vec<T>,
-    pub(super) g: Vec<T>,
-    pub(super) b: Vec<T>,
-    pub(super) a: Vec<T>,
+    pub(super) r: minivec::MiniVec<T>,
+    pub(super) g: minivec::MiniVec<T>,
+    pub(super) b: minivec::MiniVec<T>,
+    pub(super) a: minivec::MiniVec<T>,
     pub(super) h: usize,
     pub(super) w: usize,
 }

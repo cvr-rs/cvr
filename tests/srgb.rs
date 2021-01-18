@@ -5,16 +5,23 @@ extern crate cvr;
 use cvr::convert::iter::{LinearGrayIterator, LinearSRGBIterator, SRGBLinearIterator};
 
 fn float_eq(a: f32, b: f32) -> bool {
-    (a - b).abs() < std::f32::EPSILON * (a.max(b))
+    (a - b).abs() <= std::f32::EPSILON * (a.max(b))
 }
 
 fn float_array_eq(actual: &[f32], expected: &[f32]) -> bool {
-    actual
+    let matches = actual
         .iter()
         .zip(expected.iter())
         .fold(true, |equal: bool, (a, b)| -> bool {
             equal && float_eq(*a, *b)
-        })
+        });
+
+    if !matches {
+        dbg!(actual);
+        dbg!(expected);
+    }
+
+    matches
 }
 
 #[test]
@@ -96,16 +103,90 @@ fn srgb_to_gray() {
 
 #[test]
 fn rgb_to_hsv() {
-    let rgb = [0.19, 0.38, 0.38];
-    let hsv = cvr::convert::linear_to_hsv(rgb);
+    let rgb_and_hsv_triples = [
+        // cyan
+        //
+        ([0.19, 0.38, 0.38], [180.0, 0.5, 0.38], [0.19, 0.38, 0.38]),
+        // red
+        //
+        (
+            [0.75, 0.19, 0.19],
+            [0.0, 0.746_666_67, 0.75],
+            [0.75, 0.19, 0.19],
+        ),
+        // blue-cyan
+        //
+        ([0.25, 0.63, 1.0], [209.6, 0.75, 1.0], [0.25, 0.63, 1.0]),
+        // yellow-red
+        //
+        ([0.63, 0.31, 0.0], [29.52381, 1.0, 0.63], [0.63, 0.31, 0.0]),
+        // blue
+        //
+        (
+            [0.438, 0.438, 0.875],
+            [240.0, 0.499_428_57, 0.875],
+            [0.438, 0.438, 0.875],
+        ),
+        // yellow
+        //
+        ([0.5, 0.5, 0.125], [60.0, 0.75, 0.5], [0.5, 0.5, 0.125]),
+        // magenta-blue
+        //
+        (
+            [0.469, 0.188, 0.75],
+            [270.0, 0.749_333_4, 0.75],
+            [0.468_999_98, 0.187_999_96, 0.75],
+        ),
+        // green-yellow
+        //
+        (
+            [0.656, 0.875, 0.438],
+            [90.06865, 0.499_428_57, 0.875],
+            [0.656, 0.875, 0.438],
+        ),
+        // magenta
+        //
+        (
+            [0.375, 0.094, 0.375],
+            [300.0, 0.749_333_4, 0.375],
+            [0.375, 0.093_999_98, 0.375],
+        ),
+        // green
+        //
+        (
+            [0.062, 0.25, 0.062],
+            [120.0, 0.752, 0.25],
+            [0.062_000_006, 0.25, 0.062_000_006],
+        ),
+        // red-magenta
+        //
+        (
+            [0.875, 0.219, 0.547],
+            [330.0, 0.749_714_3, 0.875],
+            [0.875, 0.218_999_98, 0.547],
+        ),
+        // cyan-green
+        //
+        (
+            [0.156, 0.625, 0.391],
+            [150.063_96, 0.750_399_95, 0.625],
+            [0.156_000_02, 0.625, 0.390_999_94],
+        ),
+        // black
+        //
+        ([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]),
+        // white
+        //
+        ([1.0, 1.0, 1.0], [0.0, 0.0, 1.0], [1.0, 1.0, 1.0]),
+    ];
 
-    assert!(float_array_eq(&hsv, &[180.0, 0.5, 0.38]));
-}
+    rgb_and_hsv_triples
+        .iter()
+        .for_each(|(rgb, expected_hsv, round_tripped_rgb)| {
+            let hsv = cvr::convert::linear_to_hsv(*rgb);
+            assert_eq!(&hsv[..], &expected_hsv[..]);
 
-#[test]
-fn hsv_to_rgb() {
-    let hsv = [180.0, 0.5, 0.38];
-    let rgb = cvr::convert::hsv_to_linear(hsv);
-
-    assert!(float_array_eq(&rgb, &[0.19, 0.38, 0.38]));
+            let converted_rgb = cvr::convert::hsv_to_linear(hsv);
+            assert_eq!(&converted_rgb[..], &round_tripped_rgb[..]);
+        });
 }

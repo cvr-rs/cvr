@@ -208,6 +208,7 @@ pub fn linear_to_hsv([r, g, b]: [f32; 3]) -> [f32; 3] {
     };
 
     let s = if v == 0.0 { 0.0 } else { c / v };
+    let h = if h < 0.0 { 360.0 + h } else { h };
 
     [h, s, v]
 }

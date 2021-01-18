@@ -1,6 +1,8 @@
 extern crate cvr;
 
-use cvr::convert::iter::{LinearGrayIterator, LinearSRGBIterator, SRGBLinearIterator};
+use cvr::convert::iter::{
+    LinearGrayIterator, LinearHSVIterator, LinearSRGBIterator, SRGBLinearIterator,
+};
 
 #[test]
 fn test_png_io_rgba() {
@@ -47,7 +49,7 @@ fn test_png_hsv() {
     let iter = img
         .rgb_iter()
         .srgb_to_linear()
-        .map(|[r, g, b]| cvr::convert::linear_to_hsv([r, g, b]))
+        .linear_to_hsv()
         .map(|[h, s, v]| [h / 360.0, s, v])
         .linear_to_srgb()
         .zip(a.iter().copied())

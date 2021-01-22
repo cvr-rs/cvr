@@ -1,5 +1,6 @@
-//! `convert` houses functions for working primarily in the 8-bit `sRGB` color space but also
-//! supports various other operations like color space conversions.
+//! `convert` houses functions for converting between the [`sRGB`](https://en.wikipedia.org/wiki/SRGB)
+//! and linear color spaces but also supports conversions to the [`HSV`](https://en.wikipedia.org/wiki/HSL_and_HSV)
+//! space and [grayscale](https://en.wikipedia.org/wiki/Grayscale).
 //!
 //! It's worth noting for those who are unfamiliar with the `sRGB` color space, it's one of the
 //! most widely used and popular color spaces.
@@ -22,7 +23,7 @@
 //! use cvr::convert::iter::SRGBLinearIterator;
 //!
 //! // `cvr` emphasizes supporting channel-major ordering of image data
-//! // this is done for better interop with GPU-based code
+//! // this is done for better interop with GPU-based code which would expect planar data
 //! //
 //! let r = [1u8, 2, 3];
 //! let g = [4u8, 5, 6];
@@ -140,8 +141,7 @@ pub fn srgb_to_linear(u: u8) -> f32 {
 /// ```
 ///
 #[must_use]
-#[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::cast_sign_loss)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub fn linear_to_srgb(u: f32) -> u8 {
     let u = if u <= 0.003_130_8 {
         12.92 * u
@@ -181,8 +181,8 @@ pub fn linear_to_gray(rgb: [f32; 3]) -> f32 {
 ///
 /// While not technically unsafe, `(R, G, B)` values are assumed to be in the range `[0.0, 1.0]`.
 ///
-#[allow(clippy::float_cmp, clippy::many_single_char_names)]
 #[must_use]
+#[allow(clippy::float_cmp, clippy::many_single_char_names)]
 pub fn linear_to_hsv([r, g, b]: [f32; 3]) -> [f32; 3] {
     debug_assert!((0.0..=1.0).contains(&r));
     debug_assert!((0.0..=1.0).contains(&g));
@@ -224,8 +224,8 @@ pub fn linear_to_hsv([r, g, b]: [f32; 3]) -> [f32; 3] {
 /// While not explicitly `unsafe`, this function has implicit contracts on the ranges of its inputs
 /// and isn't guaranteed to be correct or `panic!` for values outside those ranges.
 ///
-#[allow(clippy::many_single_char_names, clippy::manual_range_contains)]
 #[must_use]
+#[allow(clippy::many_single_char_names, clippy::manual_range_contains)]
 pub fn hsv_to_linear([h, s, v]: [f32; 3]) -> [f32; 3] {
     debug_assert!((0.0..=360.0).contains(&h));
     debug_assert!((0.0..=1.0).contains(&s));
@@ -428,14 +428,14 @@ pub mod iter {
         }
     }
 
-    /// `LinearHSVIterator` is the public trait implemented for all `Iterator` types that enables
-    /// the adapter `linear_to_hsv()` to be invoked.
+    /// `HSVLinearIterator` is the public trait implemented for all `Iterator` types that enables
+    /// the adapter `hsv_to_linear()` to be invoked.
     ///
     pub trait HSVLinearIterator: std::iter::Iterator<Item = [f32; 3]>
     where
         Self: Sized,
     {
-        fn linear_to_hsv(self) -> HSVToLinear<Self> {
+        fn hsv_to_linear(self) -> HSVToLinear<Self> {
             HSVToLinear { iter: self }
         }
     }

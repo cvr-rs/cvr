@@ -1,12 +1,15 @@
 extern crate minivec;
 
+use crate::Numeric;
+
 /// `Image` represents any `RGB` image. Internally, it stores each channel as an independent
 /// allocation which enables such things as constant-time channel swapping along with making the
 /// data cheaper to copy to a GPU which expects `CHW` ordering vs the packed format `HWC`.
 ///
+#[derive(Default)]
 pub struct Image<T>
 where
-    T: crate::Numeric,
+    T: Numeric,
 {
     pub(super) r: minivec::MiniVec<T>,
     pub(super) g: minivec::MiniVec<T>,
@@ -17,8 +20,15 @@ where
 
 impl<T> Image<T>
 where
-    T: crate::Numeric,
+    T: Numeric,
 {
+    /// `new` returns an empty `Image` with no data having been allocated.
+    ///
+    #[must_use]
+    pub fn new() -> Self {
+        <Self as std::default::Default>::default()
+    }
+
     /// `r` returns an immutable reference to the image's red channel as a `&[T]`.
     ///
     #[must_use]

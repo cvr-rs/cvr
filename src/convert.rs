@@ -269,6 +269,8 @@ pub fn hsv_to_linear([h, s, v]: [f32; 3]) -> [f32; 3] {
     [r + m, g + m, b + m]
 }
 
+/// `iter` contains the set of conversion iterators that enable lazy color space conversions.
+///
 pub mod iter {
     use super::{hsv_to_linear, linear_to_gray, linear_to_hsv, linear_to_srgb, srgb_to_linear};
 
@@ -303,6 +305,8 @@ pub mod iter {
     where
         Self: Sized,
     {
+        /// `srgb_to_linear` converts the current `Iterator` to a [`iter::SRGBToLinear`](crate::convert::iter::SRGBToLinear).
+        ///
         fn srgb_to_linear(self) -> SRGBToLinear<Self> {
             SRGBToLinear { iter: self }
         }
@@ -341,6 +345,8 @@ pub mod iter {
     where
         Self: Sized,
     {
+        /// `linear_to_srgb` converts the current `Iterator` to a [`iter::LinearToSRGB`](crate::convert::iter::LinearToSRGB).
+        ///
         fn linear_to_srgb(self) -> LinearToSRGB<Self> {
             LinearToSRGB { iter: self }
         }
@@ -376,6 +382,8 @@ pub mod iter {
     where
         Self: Sized,
     {
+        /// `linear_to_gray` converts the current `Iterator` into a [`iter::LinearToGray`](crate::convert::iter::LinearToGray).
+        ///
         fn linear_to_gray(self) -> LinearToGray<Self> {
             LinearToGray { iter: self }
         }
@@ -411,6 +419,8 @@ pub mod iter {
     where
         Self: Sized,
     {
+        /// `linear_to_hsv` transforms the current `Iterator` into a [`iter::LinearToHSV`](crate::convert::iter::LinearToHSV).
+        ///
         fn linear_to_hsv(self) -> LinearToHSV<Self> {
             LinearToHSV { iter: self }
         }
@@ -446,6 +456,8 @@ pub mod iter {
     where
         Self: Sized,
     {
+        /// `hsv_to_linear` converts the current `Iterator` to a [`iter::HSVToLinear`](crate::convert::iter::HSVToLinear).
+        ///
         fn hsv_to_linear(self) -> HSVToLinear<Self> {
             HSVToLinear { iter: self }
         }

@@ -1,3 +1,6 @@
+//! `rgba` contains various data structures for working in the RGBA color space.
+//!
+
 extern crate minivec;
 
 /// `Image` represents any `RGBA` image. Internally, it stores each channel as an independent
@@ -107,6 +110,8 @@ impl<'a, N> Iter<'a, N>
 where
     N: crate::Numeric,
 {
+    /// `new` returns an [`Iter`] that traverses the provided slices.
+    ///
     pub fn new<R>(r: &'a R, g: &'a R, b: &'a R, a: &'a R) -> Self
     where
         R: std::convert::AsRef<[N]>,

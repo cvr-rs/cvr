@@ -10,9 +10,13 @@ extern crate png;
 ///
 #[derive(std::fmt::Debug)]
 pub enum Error {
+    /// Error during the PNG decoding process.
     Decoding(::png::DecodingError),
+    /// Error in the PNG encoding process.
     Encoding(::png::EncodingError),
+    /// When reading in the PNG image, the file's actual bit depth did not match the expected.
     InvalidBitDepth,
+    /// When reading in the PNG image, the file's actual color type did not match the expected.
     InvalidColorType,
 }
 

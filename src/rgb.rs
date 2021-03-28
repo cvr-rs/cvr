@@ -1,3 +1,6 @@
+//! `rgb` contains various data structures for working with images in the RGB color space.
+//!
+
 extern crate minivec;
 
 use crate::Numeric;

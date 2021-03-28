@@ -226,7 +226,7 @@ where
         });
 
     let (ptr, len, cap) = into_raw_parts(buf);
-    let buf = unsafe { Vec::<u8>::from_raw_parts(ptr as *mut u8, len, cap) };
+    let buf = unsafe { Vec::<u8>::from_raw_parts(ptr.cast::<u8>(), len, cap) };
 
     Ok(png_writer.write_image_data(&buf)?)
 }
@@ -267,7 +267,7 @@ where
         });
 
     let (ptr, len, cap) = into_raw_parts(buf);
-    let buf = unsafe { Vec::<u8>::from_raw_parts(ptr as *mut u8, len, cap) };
+    let buf = unsafe { Vec::<u8>::from_raw_parts(ptr.cast::<u8>(), len, cap) };
 
     Ok(png_writer.write_image_data(&buf)?)
 }
@@ -307,7 +307,7 @@ where
         });
 
     let (ptr, len, cap) = into_raw_parts(buf);
-    let buf = unsafe { Vec::<u8>::from_raw_parts(ptr as *mut u8, len, cap) };
+    let buf = unsafe { Vec::<u8>::from_raw_parts(ptr.cast::<u8>(), len, cap) };
 
     Ok(png_writer.write_image_data(&buf)?)
 }

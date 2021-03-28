@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 //! `convert` houses functions for converting between the [`sRGB`](https://en.wikipedia.org/wiki/SRGB)
 //! and linear color spaces but also supports conversions to the [`HSV`](https://en.wikipedia.org/wiki/HSL_and_HSV)
 //! space and [grayscale](https://en.wikipedia.org/wiki/Grayscale).
@@ -177,6 +179,10 @@ pub fn linear_to_gray(rgb: [f32; 3]) -> f32 {
 /// The returned array is in `(H, S, V)` ordering with `H` in the range `[0.0, 360.0]` and `S`, `V`
 /// both within the range `[0.0, 1.0]`.
 ///
+/// # Panics
+///
+/// Panics in debug builds if the supplied `[r, g, b]` values are not within the range `[0.0, 1.0]`.
+///
 /// # Safety
 ///
 /// While not technically unsafe, `(R, G, B)` values are assumed to be in the range `[0.0, 1.0]`.
@@ -218,6 +224,11 @@ pub fn linear_to_hsv([r, g, b]: [f32; 3]) -> [f32; 3] {
 ///
 /// The input hue must be in the range `[0.0, 360.0]` and the `S` and `V` values must be in the
 /// range `[0.0, 1.0]`.
+///
+/// # Panics
+///
+/// Panics in debug builds if the supplied `[h, s, v]` values exceed their bounds, i.e. if `h` is
+/// not within the range `[0.0, 360.0]` and `s` or `v` are outside the range `[0.0, 1.0]`.
 ///
 /// # Safety
 ///

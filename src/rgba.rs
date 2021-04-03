@@ -7,6 +7,7 @@ extern crate minivec;
 /// allocation which enables such things as constant-time channel swapping along with making the
 /// data cheaper to copy to a GPU which expects `CHW` ordering vs the packed format `HWC`.
 ///
+#[derive(Default)]
 pub struct Image<T>
 where
     T: crate::Numeric,

@@ -5,6 +5,7 @@
 #![warn(clippy::pedantic, missing_docs)]
 
 pub mod convert;
+pub mod debayer;
 pub mod png;
 pub mod rgb;
 pub mod rgba;

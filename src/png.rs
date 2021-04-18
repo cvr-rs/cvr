@@ -280,6 +280,48 @@ where
   Ok(png_writer.write_image_data(&buf)?)
 }
 
+/// `write_gray8` attempts to write the provided grayscale image to the supplied `std::io::Write` object using the
+/// specified width and height.
+///
+/// # Errors
+///
+/// Returns either a wrapped `::png::EncodingError` or a truthy `Result`.
+///
+#[allow(clippy::cast_possible_truncation)]
+pub fn write_gray8<Writer, Iter>(
+  writer: Writer,
+  img: Iter,
+  width: usize,
+  height: usize,
+) -> Result<(), Error>
+where
+  Writer: std::io::Write,
+  Iter: std::iter::Iterator<Item = u8>,
+{
+  let mut png_encoder = ::png::Encoder::new(writer, width as u32, height as u32);
+  png_encoder.set_color(::png::ColorType::Grayscale);
+  png_encoder.set_depth(::png::BitDepth::Eight);
+  let mut png_writer = png_encoder.write_header()?;
+
+  let num_channels = 1;
+  let count = num_channels * width * height;
+
+  let mut buf = minivec::MiniVec::<u8>::with_capacity(count);
+  buf
+    .spare_capacity_mut()
+    .iter_mut()
+    .zip(img)
+    .for_each(|(x, v)| {
+      *x = std::mem::MaybeUninit::<u8>::new(v);
+    });
+
+  unsafe {
+    buf.set_len(count);
+  }
+
+  Ok(png_writer.write_image_data(&buf)?)
+}
+
 /// `write_grayalpha8` attempts to write the provided grayscale-alpha image to the supplied
 /// `std::io::Write` object using the specified width and height.
 ///

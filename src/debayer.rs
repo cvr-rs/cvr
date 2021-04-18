@@ -1,3 +1,13 @@
+unsafe fn get(s: &[u8], idx: usize) -> f32 {
+  const NORM: f32 = 1.0 / (u8::MAX as f32);
+  let v = f32::from(*s.get_unchecked(idx));
+  v * NORM
+}
+
+unsafe fn set(ptr: *mut std::mem::MaybeUninit<f32>, idx: usize, val: f32) {
+  *ptr.add(idx) = std::mem::MaybeUninit::new(val);
+}
+
 #[allow(clippy::too_many_arguments)]
 unsafe fn demosaic_rg8_interpolate(
   data: &[u8],
@@ -12,16 +22,6 @@ unsafe fn demosaic_rg8_interpolate(
   gp: *mut std::mem::MaybeUninit<f32>,
   bp: *mut std::mem::MaybeUninit<f32>,
 ) {
-  unsafe fn get(s: &[u8], idx: usize) -> f32 {
-    const NORM: f32 = 1.0 / (u8::MAX as f32);
-    let v = f32::from(*s.get_unchecked(idx));
-    v * NORM
-  }
-
-  unsafe fn set(ptr: *mut std::mem::MaybeUninit<f32>, idx: usize, val: f32) {
-    *ptr.add(idx) = std::mem::MaybeUninit::new(val);
-  }
-
   let write_idx = curr_row * cols + curr_col;
 
   if curr_row % 2 == 0 {

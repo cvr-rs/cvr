@@ -180,13 +180,11 @@ fn rgb_to_hsv() {
     ([1.0, 1.0, 1.0], [0.0, 0.0, 1.0], [1.0, 1.0, 1.0]),
   ];
 
-  rgb_and_hsv_triples
-    .iter()
-    .for_each(|(rgb, expected_hsv, round_tripped_rgb)| {
-      let hsv = cvr::convert::linear_to_hsv(*rgb);
-      assert_eq!(&hsv[..], &expected_hsv[..]);
+  for (rgb, expected_hsv, round_tripped_rgb) in &rgb_and_hsv_triples {
+    let hsv = cvr::convert::linear_to_hsv(*rgb);
+    assert_eq!(&hsv[..], &expected_hsv[..]);
 
-      let converted_rgb = cvr::convert::hsv_to_linear(hsv);
-      assert_eq!(&converted_rgb[..], &round_tripped_rgb[..]);
-    });
+    let converted_rgb = cvr::convert::hsv_to_linear(hsv);
+    assert_eq!(&converted_rgb[..], &round_tripped_rgb[..]);
+  }
 }

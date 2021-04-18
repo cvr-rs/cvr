@@ -29,7 +29,7 @@ where
   ///
   #[must_use]
   pub fn new() -> Self {
-    <Self as std::default::Default>::default()
+    <Self as Default>::default()
   }
 
   /// `r` returns an immutable reference to the image's red channel as a `&[T]`.

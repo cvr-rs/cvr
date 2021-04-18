@@ -26,37 +26,41 @@ fn debayer_rg() {
 
 #[test]
 fn debayer_parrot() {
+  // let img =
+  //   cvr::png::read_rgb8(std::fs::File::open("tests/images/bright-parrot-for-debayer.png").unwrap())
+  //     .unwrap();
+
+  // let mut bayered_data = minivec::mini_vec![0_u8; img.total()];
+
+  // for row_idx in 0..img.height() {
+  //   for col_idx in 0..img.width() {
+  //     fn is_even(x: usize) -> bool {
+  //       x % 2 == 0
+  //     }
+
+  //     let idx = row_idx * img.width() + col_idx;
+
+  //     bayered_data[idx] = match (is_even(row_idx), is_even(col_idx)) {
+  //       (true, true) => img.r()[idx],
+  //       (true, false) | (false, true) => img.g()[idx],
+  //       (false, false) => img.b()[idx],
+  //     };
+  //   }
+  // }
+
+  // cvr::png::write_gray8(
+  //   std::fs::File::create("tests/images/bayered-parrot.png").unwrap(),
+  //   bayered_data.iter().copied(),
+  //   img.width(),
+  //   img.height(),
+  // )
+  // .unwrap();
+
   let img =
-    cvr::png::read_rgb8(std::fs::File::open("tests/images/bright-parrot-for-debayer.png").unwrap())
-      .unwrap();
+    cvr::png::read_gray8(std::fs::File::open("tests/images/bayered-parrot.png").unwrap()).unwrap();
 
-  let mut bayered_data = minivec::mini_vec![0_u8; img.total()];
-
-  for row_idx in 0..img.height() {
-    for col_idx in 0..img.width() {
-      fn is_even(x: usize) -> bool {
-        x % 2 == 0
-      }
-
-      let idx = row_idx * img.width() + col_idx;
-
-      bayered_data[idx] = match (is_even(row_idx), is_even(col_idx)) {
-        (true, true) => img.r()[idx],
-        (true, false) | (false, true) => img.g()[idx],
-        (false, false) => img.b()[idx],
-      };
-    }
-  }
-
-  cvr::png::write_gray8(
-    std::fs::File::create("tests/images/bayered-parrot.png").unwrap(),
-    bayered_data.iter().copied(),
-    img.width(),
-    img.height(),
-  )
-  .unwrap();
-
-  let debayered_img = cvr::debayer::demosaic_rg8(&bayered_data, img.height(), img.width());
+  let bayered_data = img.v();
+  let debayered_img = cvr::debayer::demosaic_rg8(bayered_data, img.height(), img.width());
 
   cvr::png::write_rgb8(
     std::fs::File::create("tests/images/debayered-parrot.png").unwrap(),

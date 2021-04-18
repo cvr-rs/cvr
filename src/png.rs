@@ -280,6 +280,71 @@ where
   Ok(png_writer.write_image_data(&buf)?)
 }
 
+/// `read_gray8` claims ownership of the supplied `std::io::Read` type and attempts to decode an
+/// 8-bit grayscale image.
+///
+/// # Errors
+///
+/// Returns a `Result` that's either the 8-bit grayscale data or a `cvr::png::Error` type.
+///
+pub fn read_gray8<Reader>(r: Reader) -> Result<crate::gray::Image<u8>, Error>
+where
+  Reader: std::io::Read,
+{
+  let (output_info, mut png_reader) = ::png::Decoder::new(r).read_info()?;
+
+  let ::png::OutputInfo {
+    height,
+    width,
+    color_type,
+    bit_depth,
+    ..
+  } = output_info;
+
+  if color_type != ::png::ColorType::Grayscale && color_type != ::png::ColorType::GrayscaleAlpha {
+    return Err(Error::InvalidColorType);
+  }
+
+  if bit_depth != ::png::BitDepth::Eight {
+    return Err(Error::InvalidBitDepth);
+  }
+
+  let height = height as usize;
+  let width = width as usize;
+  let size = height * width;
+
+  let num_channels = if color_type == ::png::ColorType::GrayscaleAlpha {
+    2
+  } else {
+    1
+  };
+
+  let num_cols = width;
+
+  let mut v = minivec::mini_vec![0_u8; size];
+  let mut row_idx = 0;
+
+  while let Some(row) = png_reader.next_row()? {
+    let idx = row_idx * num_cols;
+    let end_idx = idx + num_cols;
+
+    row
+      .chunks_exact(num_channels)
+      .zip(v[idx..end_idx].iter_mut())
+      .for_each(|(chunk, x)| {
+        *x = chunk[0];
+      });
+
+    row_idx += 1;
+  }
+
+  Ok(crate::gray::Image {
+    v,
+    h: height,
+    w: width,
+  })
+}
+
 /// `write_gray8` attempts to write the provided grayscale image to the supplied `std::io::Write` object using the
 /// specified width and height.
 ///

@@ -6,6 +6,7 @@
 
 pub mod convert;
 pub mod debayer;
+pub mod gray;
 pub mod png;
 pub mod rgb;
 pub mod rgba;

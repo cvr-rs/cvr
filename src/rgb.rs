@@ -73,6 +73,13 @@ where
   pub fn rgb_iter(&self) -> crate::rgb::Iter<'_, T> {
     crate::rgb::Iter::new(&self.r, &self.g, &self.b)
   }
+
+  /// `total` returns the total number of pixels in the image
+  ///
+  #[must_use]
+  pub fn total(&self) -> usize {
+    self.width() * self.height()
+  }
 }
 
 /// `Iter` enables the simultaneous traversal of 3 separate channels of image data. It works

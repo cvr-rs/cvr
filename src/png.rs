@@ -34,11 +34,6 @@ impl std::convert::From<::png::EncodingError> for Error {
   }
 }
 
-fn into_raw_parts<T>(v: Vec<T>) -> (*mut T, usize, usize) {
-  let mut m = std::mem::ManuallyDrop::new(v);
-  (m.as_mut_ptr(), m.len(), m.capacity())
-}
-
 /// `read_rgba8` claims ownership of the supplied `std::io::Read` type and attempts to decode an
 /// 8-bit `RGBA` image.
 ///

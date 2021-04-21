@@ -149,41 +149,27 @@ where
   let width = width as usize;
   let size = height * width;
 
-  let mut r = minivec::MiniVec::<u8>::with_capacity(size);
-  let mut g = minivec::MiniVec::<u8>::with_capacity(size);
-  let mut b = minivec::MiniVec::<u8>::with_capacity(size);
-
-  let mut row_idx = 0;
-
   let num_channels = if color_type == ::png::ColorType::RGBA {
     4
   } else {
     3
   };
 
-  let num_cols = width;
-  while let Some(row) = png_reader.next_row()? {
-    let idx = row_idx * num_cols;
-    let end_idx = idx + num_cols;
+  let mut r = minivec::mini_vec![0_u8; size];
+  let mut g = minivec::mini_vec![0_u8; size];
+  let mut b = minivec::mini_vec![0_u8; size];
 
+  let mut rgb_iter = crate::rgb::IterMut::new(&mut r, &mut g, &mut b);
+
+  while let Some(row) = png_reader.next_row()? {
     row
       .chunks_exact(num_channels)
-      .zip(r.spare_capacity_mut()[idx..end_idx].iter_mut())
-      .zip(g.spare_capacity_mut()[idx..end_idx].iter_mut())
-      .zip(b.spare_capacity_mut()[idx..end_idx].iter_mut())
-      .for_each(|(((chunk, r), g), b)| {
-        *r = std::mem::MaybeUninit::new(chunk[0]);
-        *g = std::mem::MaybeUninit::new(chunk[1]);
-        *b = std::mem::MaybeUninit::new(chunk[2]);
+      .zip(&mut rgb_iter)
+      .for_each(|(chunk, [r, g, b])| {
+        *r = chunk[0];
+        *g = chunk[1];
+        *b = chunk[2];
       });
-
-    row_idx += 1;
-  }
-
-  unsafe {
-    r.set_len(size);
-    g.set_len(size);
-    b.set_len(size);
   }
 
   Ok(crate::rgb::Image {

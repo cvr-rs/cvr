@@ -135,3 +135,72 @@ where
     }
   }
 }
+
+/// `IterMut` enables the simultaneous traversal of 3 separate channels of image data. It works
+/// with any type that can be converted to a `&mut [Numeric]`. Image data is returned pixel-by-pixel
+/// in a `[&'a mut T; 3]` format with `(R, G, B)` ordering.
+///
+pub struct IterMut<'a, T>
+where
+  T: Numeric,
+{
+  r: std::slice::IterMut<'a, T>,
+  g: std::slice::IterMut<'a, T>,
+  b: std::slice::IterMut<'a, T>,
+}
+
+impl<'a, T> IterMut<'a, T>
+where
+  T: Numeric,
+{
+  /// `new` constructs a new `IterMut` over the backing `&'a mut [T]` of each `&'a mut U` supplied by the user.
+  ///
+  /// # Example
+  /// ```
+  /// let mut r = vec![0_u8; 2];
+  /// let mut g = vec![0_u8; 2];
+  /// let mut b = vec![0_u8; 2];
+  ///
+  /// let rgb_iter = cvr::rgb::IterMut::new(&mut r, &mut g, &mut b);
+  ///
+  /// let pixels = [1, 2, 3, 4, 5, 6]; // assume only 2 pixels in the buffer (packed representation)
+  /// pixels
+  ///   .chunks_exact(3)
+  ///   .zip(rgb_iter)
+  ///   .for_each(|(chunk, [r, g, b])| {
+  ///     *r = chunk[0];
+  ///     *g = chunk[1];
+  ///     *b = chunk[2];
+  ///   });
+  ///
+  /// assert_eq!(r, [1, 4]);
+  /// assert_eq!(g, [2, 5]);
+  /// assert_eq!(b, [3, 6]);
+  ///
+  /// ```
+  ///
+  pub fn new<U>(r: &'a mut U, g: &'a mut U, b: &'a mut U) -> Self
+  where
+    U: std::convert::AsMut<[T]>,
+  {
+    Self {
+      r: r.as_mut().iter_mut(),
+      g: g.as_mut().iter_mut(),
+      b: b.as_mut().iter_mut(),
+    }
+  }
+}
+
+impl<'a, T> std::iter::Iterator for IterMut<'a, T>
+where
+  T: Numeric,
+{
+  type Item = [&'a mut T; 3];
+
+  fn next(&mut self) -> Option<Self::Item> {
+    match (self.r.next(), self.g.next(), self.b.next()) {
+      (Some(r), Some(g), Some(b)) => Some([r, g, b]),
+      _ => None,
+    }
+  }
+}

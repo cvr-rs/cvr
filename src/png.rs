@@ -5,6 +5,8 @@
 
 extern crate png;
 
+use crate::{gray, rgb, rgba};
+
 /// `Error` wraps a decoding/encoding error directly from the underlying `png` crate dependency or
 /// conveys that the supplied `Reader` does not match the expected format.
 ///
@@ -44,7 +46,7 @@ fn into_raw_parts<T>(v: Vec<T>) -> (*mut T, usize, usize) {
 ///
 /// Returns a `Result` that's either the 8-bit `RGBA` data or a `cvr::png::Error` type.
 ///
-pub fn read_rgba8<Reader>(r: Reader) -> Result<crate::rgba::Image<u8>, Error>
+pub fn read_rgba8<Reader>(r: Reader) -> Result<rgba::Image<u8>, Error>
 where
   Reader: std::io::Read,
 {
@@ -69,44 +71,28 @@ where
   let height = height as usize;
   let width = width as usize;
   let size = height * width;
-
-  let mut r = minivec::MiniVec::<u8>::with_capacity(size);
-  let mut g = minivec::MiniVec::<u8>::with_capacity(size);
-  let mut b = minivec::MiniVec::<u8>::with_capacity(size);
-  let mut a = minivec::MiniVec::<u8>::with_capacity(size);
-
-  let mut row_idx = 0;
-
   let num_channels = 4;
-  let num_cols = width;
-  while let Some(row) = png_reader.next_row()? {
-    let idx = row_idx * num_cols;
-    let end_idx = idx + num_cols;
 
+  let mut r = minivec::mini_vec![0_u8; size];
+  let mut g = minivec::mini_vec![0_u8; size];
+  let mut b = minivec::mini_vec![0_u8; size];
+  let mut a = minivec::mini_vec![0_u8; size];
+
+  let mut rgba_iter = rgba::IterMut::new(&mut r, &mut g, &mut b, &mut a);
+
+  while let Some(row) = png_reader.next_row()? {
     row
       .chunks_exact(num_channels)
-      .zip(r.spare_capacity_mut()[idx..end_idx].iter_mut())
-      .zip(g.spare_capacity_mut()[idx..end_idx].iter_mut())
-      .zip(b.spare_capacity_mut()[idx..end_idx].iter_mut())
-      .zip(a.spare_capacity_mut()[idx..end_idx].iter_mut())
-      .for_each(|((((chunk, r), g), b), a)| {
-        *r = std::mem::MaybeUninit::new(chunk[0]);
-        *g = std::mem::MaybeUninit::new(chunk[1]);
-        *b = std::mem::MaybeUninit::new(chunk[2]);
-        *a = std::mem::MaybeUninit::new(chunk[3]);
+      .zip(&mut rgba_iter)
+      .for_each(|(chunk, [r, g, b, a])| {
+        *r = chunk[0];
+        *g = chunk[1];
+        *b = chunk[2];
+        *a = chunk[3];
       });
-
-    row_idx += 1;
   }
 
-  unsafe {
-    r.set_len(size);
-    g.set_len(size);
-    b.set_len(size);
-    a.set_len(size);
-  }
-
-  Ok(crate::rgba::Image {
+  Ok(rgba::Image {
     r,
     g,
     b,
@@ -123,7 +109,7 @@ where
 ///
 /// Returns a `Result` that's either the 8-bit `RGB` data or a `cvr::png::Error` type.
 ///
-pub fn read_rgb8<Reader>(r: Reader) -> Result<crate::rgb::Image<u8>, Error>
+pub fn read_rgb8<Reader>(r: Reader) -> Result<rgb::Image<u8>, Error>
 where
   Reader: std::io::Read,
 {
@@ -159,7 +145,7 @@ where
   let mut g = minivec::mini_vec![0_u8; size];
   let mut b = minivec::mini_vec![0_u8; size];
 
-  let mut rgb_iter = crate::rgb::IterMut::new(&mut r, &mut g, &mut b);
+  let mut rgb_iter = rgb::IterMut::new(&mut r, &mut g, &mut b);
 
   while let Some(row) = png_reader.next_row()? {
     row
@@ -172,7 +158,7 @@ where
       });
   }
 
-  Ok(crate::rgb::Image {
+  Ok(rgb::Image {
     r,
     g,
     b,
@@ -207,19 +193,17 @@ where
   let num_channels = 4;
   let count = num_channels * width * height;
 
-  let mut buf = vec![std::mem::MaybeUninit::<u8>::uninit(); count];
+  let mut buf = minivec::mini_vec![0_u8; count];
+
   buf
     .chunks_exact_mut(num_channels)
     .zip(img)
     .for_each(|(chunk, [r, g, b, a])| {
-      chunk[0] = std::mem::MaybeUninit::<u8>::new(r);
-      chunk[1] = std::mem::MaybeUninit::<u8>::new(g);
-      chunk[2] = std::mem::MaybeUninit::<u8>::new(b);
-      chunk[3] = std::mem::MaybeUninit::<u8>::new(a);
+      chunk[0] = r;
+      chunk[1] = g;
+      chunk[2] = b;
+      chunk[3] = a;
     });
-
-  let (ptr, len, cap) = into_raw_parts(buf);
-  let buf = unsafe { Vec::<u8>::from_raw_parts(ptr.cast::<u8>(), len, cap) };
 
   Ok(png_writer.write_image_data(&buf)?)
 }
@@ -250,18 +234,15 @@ where
   let num_channels = 3;
   let count = num_channels * width * height;
 
-  let mut buf = vec![std::mem::MaybeUninit::<u8>::uninit(); count];
+  let mut buf = minivec::mini_vec![0_u8; count];
   buf
     .chunks_exact_mut(num_channels)
     .zip(img)
     .for_each(|(chunk, [r, g, b])| {
-      chunk[0] = std::mem::MaybeUninit::<u8>::new(r);
-      chunk[1] = std::mem::MaybeUninit::<u8>::new(g);
-      chunk[2] = std::mem::MaybeUninit::<u8>::new(b);
+      chunk[0] = r;
+      chunk[1] = g;
+      chunk[2] = b;
     });
-
-  let (ptr, len, cap) = into_raw_parts(buf);
-  let buf = unsafe { Vec::<u8>::from_raw_parts(ptr.cast::<u8>(), len, cap) };
 
   Ok(png_writer.write_image_data(&buf)?)
 }
@@ -273,7 +254,7 @@ where
 ///
 /// Returns a `Result` that's either the 8-bit grayscale data or a `cvr::png::Error` type.
 ///
-pub fn read_gray8<Reader>(r: Reader) -> Result<crate::gray::Image<u8>, Error>
+pub fn read_gray8<Reader>(r: Reader) -> Result<gray::Image<u8>, Error>
 where
   Reader: std::io::Read,
 {
@@ -305,26 +286,20 @@ where
     1
   };
 
-  let num_cols = width;
-
   let mut v = minivec::mini_vec![0_u8; size];
-  let mut row_idx = 0;
+
+  let mut pixel_iter = v.iter_mut();
 
   while let Some(row) = png_reader.next_row()? {
-    let idx = row_idx * num_cols;
-    let end_idx = idx + num_cols;
-
     row
       .chunks_exact(num_channels)
-      .zip(v[idx..end_idx].iter_mut())
+      .zip(&mut pixel_iter)
       .for_each(|(chunk, x)| {
         *x = chunk[0];
       });
-
-    row_idx += 1;
   }
 
-  Ok(crate::gray::Image {
+  Ok(gray::Image {
     v,
     h: height,
     w: width,
@@ -357,18 +332,10 @@ where
   let num_channels = 1;
   let count = num_channels * width * height;
 
-  let mut buf = minivec::MiniVec::<u8>::with_capacity(count);
-  buf
-    .spare_capacity_mut()
-    .iter_mut()
-    .zip(img)
-    .for_each(|(x, v)| {
-      *x = std::mem::MaybeUninit::<u8>::new(v);
-    });
-
-  unsafe {
-    buf.set_len(count);
-  }
+  let mut buf = minivec::mini_vec![0_u8; count];
+  buf.iter_mut().zip(img).for_each(|(x, v)| {
+    *x = v;
+  });
 
   Ok(png_writer.write_image_data(&buf)?)
 }
@@ -399,17 +366,14 @@ where
   let num_channels = 2;
   let count = num_channels * width * height;
 
-  let mut buf = vec![std::mem::MaybeUninit::<u8>::uninit(); count];
+  let mut buf = minivec::mini_vec![0_u8; count];
   buf
     .chunks_exact_mut(num_channels)
     .zip(img)
     .for_each(|(chunk, [v, a])| {
-      chunk[0] = std::mem::MaybeUninit::<u8>::new(v);
-      chunk[1] = std::mem::MaybeUninit::<u8>::new(a);
+      chunk[0] = v;
+      chunk[1] = a;
     });
-
-  let (ptr, len, cap) = into_raw_parts(buf);
-  let buf = unsafe { Vec::<u8>::from_raw_parts(ptr.cast::<u8>(), len, cap) };
 
   Ok(png_writer.write_image_data(&buf)?)
 }

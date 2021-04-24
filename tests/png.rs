@@ -7,7 +7,7 @@ use cvr::convert::iter::{
 #[test]
 fn test_png_io_rgba() {
   let parrot_img = std::fs::File::open("tests/images/parrot.png").unwrap();
-  let copy_img = std::fs::File::create("tests/images/parrot-rgba-copy.png").unwrap();
+  let copy_img = std::fs::File::create("tests/images/output/parrot-rgba-copy.png").unwrap();
 
   let img = cvr::png::read_rgba8(parrot_img).unwrap();
   cvr::png::write_rgba8(copy_img, img.rgba_iter(), img.width(), img.height()).unwrap();
@@ -16,7 +16,7 @@ fn test_png_io_rgba() {
 #[test]
 fn test_png_io_rgb() {
   let parrot_img = std::fs::File::open("tests/images/parrot.png").unwrap();
-  let copy_img = std::fs::File::create("tests/images/parrot-rgb-copy.png").unwrap();
+  let copy_img = std::fs::File::create("tests/images/output/parrot-rgb-copy.png").unwrap();
 
   let img = cvr::png::read_rgb8(parrot_img).unwrap();
   cvr::png::write_rgb8(copy_img, img.rgb_iter(), img.width(), img.height()).unwrap();
@@ -25,7 +25,7 @@ fn test_png_io_rgb() {
 #[test]
 fn test_grayscale_alpha_png() {
   let parrot_img = std::fs::File::open("tests/images/parrot.png").unwrap();
-  let copy_img = std::fs::File::create("tests/images/parrot-grayscale-alpha.png").unwrap();
+  let copy_img = std::fs::File::create("tests/images/output/parrot-grayscale-alpha.png").unwrap();
 
   let img = cvr::png::read_rgba8(parrot_img).unwrap();
   let iter = img
@@ -42,7 +42,7 @@ fn test_grayscale_alpha_png() {
 #[test]
 fn test_png_hsv() {
   let parrot_img = std::fs::File::open("tests/images/parrot.png").unwrap();
-  let copy_img = std::fs::File::create("tests/images/parrot-hsv.png").unwrap();
+  let copy_img = std::fs::File::create("tests/images/output/parrot-hsv.png").unwrap();
 
   let img = cvr::png::read_rgba8(parrot_img).unwrap();
   let a = img.a();

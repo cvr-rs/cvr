@@ -2,6 +2,9 @@
 #![allow(clippy::float_cmp)]
 
 extern crate cvr;
+extern crate minivec;
+
+use cvr::convert::iter::SRGBLinearIterator;
 
 #[test]
 fn debayer_rg() {
@@ -25,48 +28,60 @@ fn debayer_rg() {
 }
 
 #[test]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn debayer_parrot() {
-  // let img =
-  //   cvr::png::read_rgb8(std::fs::File::open("tests/images/bright-parrot-for-debayer.png").unwrap())
-  //     .unwrap();
+  let mut img_rgb8 =
+    cvr::png::read_rgb8(std::fs::File::open("tests/images/bright-parrot-for-debayer.png").unwrap())
+      .unwrap();
 
-  // let mut bayered_data = minivec::mini_vec![0_u8; img.total()];
+  img_rgb8.rgb_iter_mut().for_each(|[r, g, b]| {
+    *r = (cvr::convert::srgb_to_linear(*r) * 255.0) as u8;
+    *g = (cvr::convert::srgb_to_linear(*g) * 255.0) as u8;
+    *b = (cvr::convert::srgb_to_linear(*b) * 255.0) as u8;
+  });
 
-  // for row_idx in 0..img.height() {
-  //   for col_idx in 0..img.width() {
-  //     fn is_even(x: usize) -> bool {
-  //       x % 2 == 0
-  //     }
+  let mut bayered_data = minivec::mini_vec![0_u8; img_rgb8.total()];
 
-  //     let idx = row_idx * img.width() + col_idx;
+  for row_idx in 0..img_rgb8.height() {
+    for col_idx in 0..img_rgb8.width() {
+      fn is_even(x: usize) -> bool {
+        x % 2 == 0
+      }
 
-  //     bayered_data[idx] = match (is_even(row_idx), is_even(col_idx)) {
-  //       (true, true) => img.r()[idx],
-  //       (true, false) | (false, true) => img.g()[idx],
-  //       (false, false) => img.b()[idx],
-  //     };
-  //   }
-  // }
+      let idx = row_idx * img_rgb8.width() + col_idx;
 
-  // cvr::png::write_gray8(
-  //   std::fs::File::create("tests/images/bayered-parrot.png").unwrap(),
-  //   bayered_data.iter().copied(),
-  //   img.width(),
-  //   img.height(),
-  // )
-  // .unwrap();
+      bayered_data[idx] = match (is_even(row_idx), is_even(col_idx)) {
+        (true, true) => img_rgb8.r()[idx],
+        (true, false) | (false, true) => img_rgb8.g()[idx],
+        (false, false) => img_rgb8.b()[idx],
+      };
+    }
+  }
 
-  let img =
-    cvr::png::read_gray8(std::fs::File::open("tests/images/bayered-parrot.png").unwrap()).unwrap();
+  cvr::png::write_gray8(
+    std::fs::File::create("tests/images/output/bayered-parrot.png").unwrap(),
+    bayered_data.iter().copied(),
+    img_rgb8.width(),
+    img_rgb8.height(),
+  )
+  .unwrap();
 
-  let bayered_data = img.v();
-  let debayered_img = cvr::debayer::demosaic_rg8(bayered_data, img.height(), img.width());
+  let bayered_data =
+    cvr::png::read_gray8(std::fs::File::open("tests/images/output/bayered-parrot.png").unwrap())
+      .unwrap();
+
+  let debayered_img =
+    cvr::debayer::demosaic_rg8(bayered_data.v(), img_rgb8.height(), img_rgb8.width());
 
   cvr::png::write_rgb8(
-    std::fs::File::create("tests/images/debayered-parrot.png").unwrap(),
-    debayered_img
-      .rgb_iter()
-      .map(|[r, g, b]| [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]),
+    std::fs::File::create("tests/images/output/debayered-parrot.png").unwrap(),
+    debayered_img.rgb_iter().map(|[r, g, b]| {
+      [
+        cvr::convert::linear_to_srgb(r),
+        cvr::convert::linear_to_srgb(g),
+        cvr::convert::linear_to_srgb(b),
+      ]
+    }),
     debayered_img.width(),
     debayered_img.height(),
   )

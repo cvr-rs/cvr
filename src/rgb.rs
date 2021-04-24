@@ -74,6 +74,13 @@ where
     crate::rgb::Iter::new(&self.r, &self.g, &self.b)
   }
 
+  /// `rgb_iter_mut` returns a `cvr::rgb::IterMut` to the underlying image data.
+  ///
+  #[must_use]
+  pub fn rgb_iter_mut(&mut self) -> crate::rgb::IterMut<'_, T> {
+    IterMut::new(&mut self.r, &mut self.g, &mut self.b)
+  }
+
   /// `total` returns the total number of pixels in the image
   ///
   #[must_use]

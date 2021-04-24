@@ -119,7 +119,12 @@ unsafe fn demosaic_rg8_interpolate(
 ///
 #[must_use]
 #[allow(clippy::too_many_lines, clippy::missing_panics_doc)]
-pub fn demosaic_rg8(data: &[u8], rows: usize, cols: usize) -> crate::rgb::Image<f32> {
+pub fn demosaic_rg8<T>(data: T, rows: usize, cols: usize) -> crate::rgb::Image<f32>
+where
+  T: core::convert::AsRef<[u8]>,
+{
+  let data = data.as_ref();
+
   let alignment = 32;
   let num_pixels = rows * cols;
 

@@ -4,7 +4,7 @@
 extern crate cvr;
 extern crate minivec;
 
-use cvr::convert::iter::SRGBLinearIterator;
+use cvr::convert::iter::LinearSRGBIterator;
 
 #[test]
 fn debayer_rg() {
@@ -70,20 +70,17 @@ fn debayer_parrot() {
     cvr::png::read_gray8(std::fs::File::open("tests/images/output/bayered-parrot.png").unwrap())
       .unwrap();
 
-  let debayered_img =
-    cvr::debayer::demosaic_rg8(bayered_data.v(), img_rgb8.height(), img_rgb8.width());
+  let debayer_iter = cvr::debayer::iter::DebayerRG8::new(
+    bayered_data.v(),
+    bayered_data.height(),
+    bayered_data.width(),
+  );
 
   cvr::png::write_rgb8(
     std::fs::File::create("tests/images/output/debayered-parrot.png").unwrap(),
-    debayered_img.rgb_iter().map(|[r, g, b]| {
-      [
-        cvr::convert::linear_to_srgb(r),
-        cvr::convert::linear_to_srgb(g),
-        cvr::convert::linear_to_srgb(b),
-      ]
-    }),
-    debayered_img.width(),
-    debayered_img.height(),
+    debayer_iter.linear_to_srgb(),
+    bayered_data.width(),
+    bayered_data.height(),
   )
   .unwrap();
 }

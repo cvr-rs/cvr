@@ -277,27 +277,7 @@ pub mod iter {
   /// `SRGBToLinear` lazily converts 8-bit `sRGB` pixels to their linear floating point
   /// counterparts.
   ///
-  #[allow(clippy::type_complexity)]
-  pub struct SRGBToLinear<Iter>
-  where
-    Iter: std::iter::Iterator<Item = [u8; 3]>,
-  {
-    iter: Iter,
-  }
-
-  impl<Iter> std::iter::Iterator for SRGBToLinear<Iter>
-  where
-    Iter: std::iter::Iterator<Item = [u8; 3]>,
-  {
-    type Item = [f32; 3];
-
-    fn next(&mut self) -> Option<Self::Item> {
-      self
-        .iter
-        .next()
-        .map(|[r, g, b]| [srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b)])
-    }
-  }
+  pub type SRGBToLinear<I> = std::iter::Map<I, fn([u8; 3]) -> [f32; 3]>;
 
   /// `SRGBLinear` is the public trait `std::iter::Iterator` types implement to enable
   /// `.srgb_to_linear()` as an iterator adapter.
@@ -309,7 +289,7 @@ pub mod iter {
     /// `srgb_to_linear` converts the current `Iterator` to a [`iter::SRGBToLinear`](crate::convert::iter::SRGBToLinear).
     ///
     fn srgb_to_linear(self) -> SRGBToLinear<Self> {
-      SRGBToLinear { iter: self }
+      self.map(|[r, g, b]| [srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b)])
     }
   }
 
@@ -318,26 +298,7 @@ pub mod iter {
   /// `LinearToSRGBIter` lazily converts linear floating point `(R, G, B)` data into its
   /// 8-bit `sRGB` representation.
   ///
-  pub struct LinearToSRGB<Iter>
-  where
-    Iter: std::iter::Iterator<Item = [f32; 3]>,
-  {
-    iter: Iter,
-  }
-
-  impl<Iter> std::iter::Iterator for LinearToSRGB<Iter>
-  where
-    Iter: std::iter::Iterator<Item = [f32; 3]>,
-  {
-    type Item = [u8; 3];
-
-    fn next(&mut self) -> Option<Self::Item> {
-      self
-        .iter
-        .next()
-        .map(|[r, g, b]| [linear_to_srgb(r), linear_to_srgb(g), linear_to_srgb(b)])
-    }
-  }
+  pub type LinearToSRGB<I> = std::iter::Map<I, fn([f32; 3]) -> [u8; 3]>;
 
   /// `LinearToSRGB` is the public trait `std::iter::Iterator` types implement to enable
   /// `.linear_to_srgb()` as an iterator adapter.
@@ -350,7 +311,7 @@ pub mod iter {
     /// `linear_to_srgb` converts the current `Iterator` to a [`iter::LinearToSRGB`](crate::convert::iter::LinearToSRGB).
     ///
     fn linear_to_srgb(self) -> LinearToSRGB<Self> {
-      LinearToSRGB { iter: self }
+      self.map(|[r, g, b]| [linear_to_srgb(r), linear_to_srgb(g), linear_to_srgb(b)])
     }
   }
 
@@ -359,23 +320,7 @@ pub mod iter {
   /// `LinearToGray` lazily converts linearized `f32` pixel values to their corresponding
   /// [luminance in the CIE XYZ color space](https://en.wikipedia.org/wiki/CIE_1931_color_space#Meaning_of_X,_Y_and_Z).
   ///
-  pub struct LinearToGray<Iter>
-  where
-    Iter: std::iter::Iterator<Item = [f32; 3]>,
-  {
-    iter: Iter,
-  }
-
-  impl<Iter> std::iter::Iterator for LinearToGray<Iter>
-  where
-    Iter: std::iter::Iterator<Item = [f32; 3]>,
-  {
-    type Item = f32;
-
-    fn next(&mut self) -> Option<Self::Item> {
-      self.iter.next().map(linear_to_gray)
-    }
-  }
+  pub type LinearToGray<I> = std::iter::Map<I, fn([f32; 3]) -> f32>;
 
   /// `LinearGrayIterator` is the public trait implemented for all `Iterator` types that enables
   /// the adapter `linear_to_gray()` to be invoked.
@@ -387,7 +332,7 @@ pub mod iter {
     /// `linear_to_gray` converts the current `Iterator` into a [`iter::LinearToGray`](crate::convert::iter::LinearToGray).
     ///
     fn linear_to_gray(self) -> LinearToGray<Self> {
-      LinearToGray { iter: self }
+      self.map(linear_to_gray)
     }
   }
 
@@ -396,23 +341,7 @@ pub mod iter {
   /// `LinearToHSV` lazily converts linearized `f32` pixel values to their corresponding
   /// [HSV values](https://en.wikipedia.org/wiki/HSL_and_HSV#From_RGB).
   ///
-  pub struct LinearToHSV<Iter>
-  where
-    Iter: std::iter::Iterator<Item = [f32; 3]>,
-  {
-    iter: Iter,
-  }
-
-  impl<Iter> std::iter::Iterator for LinearToHSV<Iter>
-  where
-    Iter: std::iter::Iterator<Item = [f32; 3]>,
-  {
-    type Item = [f32; 3];
-
-    fn next(&mut self) -> Option<Self::Item> {
-      self.iter.next().map(linear_to_hsv)
-    }
-  }
+  pub type LinearToHSV<I> = std::iter::Map<I, fn([f32; 3]) -> [f32; 3]>;
 
   /// `LinearHSVIterator` is the public trait implemented for all `Iterator` types that enables
   /// the adapter `linear_to_hsv()` to be invoked.
@@ -424,7 +353,7 @@ pub mod iter {
     /// `linear_to_hsv` transforms the current `Iterator` into a [`iter::LinearToHSV`](crate::convert::iter::LinearToHSV).
     ///
     fn linear_to_hsv(self) -> LinearToHSV<Self> {
-      LinearToHSV { iter: self }
+      self.map(linear_to_hsv)
     }
   }
 
@@ -433,23 +362,7 @@ pub mod iter {
   /// `HSVToLinear` lazily converts linearized `f32` pixel values to their corresponding
   /// [RGB values](https://en.wikipedia.org/wiki/HSL_and_HSV#HSV_to_RGB).
   ///
-  pub struct HSVToLinear<Iter>
-  where
-    Iter: std::iter::Iterator<Item = [f32; 3]>,
-  {
-    iter: Iter,
-  }
-
-  impl<Iter> std::iter::Iterator for HSVToLinear<Iter>
-  where
-    Iter: std::iter::Iterator<Item = [f32; 3]>,
-  {
-    type Item = [f32; 3];
-
-    fn next(&mut self) -> Option<Self::Item> {
-      self.iter.next().map(hsv_to_linear)
-    }
-  }
+  pub type HSVToLinear<I> = std::iter::Map<I, fn([f32; 3]) -> [f32; 3]>;
 
   /// `HSVLinearIterator` is the public trait implemented for all `Iterator` types that enables
   /// the adapter `hsv_to_linear()` to be invoked.
@@ -461,7 +374,7 @@ pub mod iter {
     /// `hsv_to_linear` converts the current `Iterator` to a [`iter::HSVToLinear`](crate::convert::iter::HSVToLinear).
     ///
     fn hsv_to_linear(self) -> HSVToLinear<Self> {
-      HSVToLinear { iter: self }
+      self.map(hsv_to_linear)
     }
   }
 

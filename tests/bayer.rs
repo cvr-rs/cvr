@@ -9,20 +9,31 @@ use cvr::convert::iter::LinearSRGBIterator;
 #[test]
 fn debayer_rg() {
   let data = [1, 2, 3, 4];
-  let img = cvr::debayer::demosaic_rg8(&data, 2, 2);
+
+  let mut r = vec![0_f32; data.len()];
+  let mut g = vec![0_f32; data.len()];
+  let mut b = vec![0_f32; data.len()];
+
+  cvr::debayer::iter::DebayerRG8::new(&data, 2, 2)
+    .zip(cvr::rgb::IterMut::new(&mut r, &mut g, &mut b))
+    .for_each(|(pixel, [r, g, b])| {
+      *r = pixel[0];
+      *g = pixel[1];
+      *b = pixel[2];
+    });
 
   assert_eq!(
-    img.r(),
+    r,
     [0.003_921_569, 0.003_921_569, 0.003_921_569, 0.003_921_569]
   );
 
   assert_eq!(
-    img.g(),
+    g,
     [0.009_803_923, 0.007_843_138, 0.011_764_707, 0.009_803_923]
   );
 
   assert_eq!(
-    img.b(),
+    b,
     [0.015_686_275, 0.015_686_275, 0.015_686_275, 0.015_686_275]
   );
 }

@@ -1,6 +1,8 @@
 #!/bin/bash
 
-cargo +nightly clippy \
-  && cargo +nightly build \
+cargo clippy \
+  && cargo build \
   && CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind" \
-     cargo +nightly test $@ 
+     cargo test --release $@ \
+  && cargo doc \
+  && cp -r target/doc /mnt/c/Users/cmaza/Documents/

@@ -8,13 +8,22 @@ fn debayer_rg8(bencher: &mut test::bench::Bencher) {
     cvr::png::read_gray8(std::fs::File::open("tests/images/output/bayered-parrot.png").unwrap())
       .unwrap();
 
-  bencher.iter(|| {
-    let debayer_iter = cvr::debayer::iter::DebayerRG8::new(
-      bayered_data.v(),
-      bayered_data.height(),
+  let mut img = cvr::rgb::Image::default();
+  unsafe {
+    cvr::debayer::demosaic_rg8_x86(
+      &bayered_data.v(),
       bayered_data.width(),
-    );
+      bayered_data.height(),
+      &mut img,
+    )
+  };
 
-    for _ in debayer_iter {}
+  bencher.iter(|| unsafe {
+    cvr::debayer::demosaic_rg8_x86(
+      &bayered_data.v(),
+      bayered_data.width(),
+      bayered_data.height(),
+      &mut img,
+    )
   });
 }

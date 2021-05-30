@@ -2,6 +2,18 @@
 //! values.
 //!
 
+#![allow(
+  clippy::cast_possible_wrap,
+  clippy::cast_ptr_alignment,
+  clippy::wildcard_imports,
+  clippy::identity_op,
+  clippy::cast_possible_truncation,
+  clippy::cast_lossless,
+  clippy::too_many_lines,
+  clippy::missing_safety_doc,
+  clippy::shadow_unrelated
+)]
+
 /// `iter` contains various iterators used for debayering images.
 ///
 pub mod iter {
@@ -151,11 +163,6 @@ pub mod iter {
 
 /// `demosaic_rg8` takes an input bayered pattern and produces a packed array of pixels
 ///
-#[allow(
-  clippy::too_many_lines,
-  clippy::missing_safety_doc,
-  clippy::shadow_unrelated
-)]
 pub unsafe fn demosaic_rg8(data: &[u8], width: usize, height: usize, vec: &mut [f32]) {
   const NORM: f32 = 1.0 / (u8::MAX as f32);
 
@@ -256,12 +263,6 @@ pub unsafe fn demosaic_rg8(data: &[u8], width: usize, height: usize, vec: &mut [
   }
 }
 
-#[allow(
-  clippy::cast_possible_wrap,
-  clippy::cast_ptr_alignment,
-  clippy::wildcard_imports,
-  clippy::identity_op
-)]
 unsafe fn debayer_red_channel(data: &[u8], rows: usize, cols: usize, r: &mut [u8]) {
   use core::arch::x86_64::*;
 
@@ -318,24 +319,28 @@ unsafe fn debayer_red_channel(data: &[u8], rows: usize, cols: usize, r: &mut [u8
       }
 
       while j + 4 < cols {
-        let r1 = *p.add(i * cols + j + 0);
-        let r2 = *p.add(i * cols + j + 2);
-        let r3 = *p.add(i * cols + j + 4);
+        let r1 = *p.add(i * cols + j + 0) as u32;
+        let r2 = *p.add(i * cols + j + 2) as u32;
+        let r3 = *p.add(i * cols + j + 4) as u32;
 
-        *pr.add(i * cols + j + 0) = r1;
-        *pr.add(i * cols + j + 1) = (r1 + r2) / 2;
-        *pr.add(i * cols + j + 2) = r2;
-        *pr.add(i * cols + j + 3) = (r2 + r3) / 2;
+        *pr.add(i * cols + j + 0) = r1 as u8;
+        *pr.add(i * cols + j + 1) = ((r1 + r2) / 2) as u8;
+        *pr.add(i * cols + j + 2) = r2 as u8;
+        *pr.add(i * cols + j + 3) = ((r2 + r3) / 2) as u8;
 
         j += 4;
       }
 
-      while j + 2 < cols {
+      while j < cols {
         let r1 = *p.add(i * cols + j + 0);
-        let r2 = *p.add(i * cols + j + 2);
+        let r2 = if j + 2 < cols {
+          *p.add(i * cols + j + 2)
+        } else {
+          r1
+        };
 
         *pr.add(i * cols + j + 0) = r1;
-        *pr.add(i * cols + j + 1) = (r1 + r2) / 2;
+        *pr.add(i * cols + j + 1) = ((r1 as u32 + r2 as u32) / 2) as u8;
 
         j += 2;
       }
@@ -351,12 +356,16 @@ unsafe fn debayer_red_channel(data: &[u8], rows: usize, cols: usize, r: &mut [u8
   //
   {
     let mut i = 0;
-    while i + 2 < rows {
+    while i < rows {
       let mut j = 0;
 
       while j + 32 <= cols {
         let r1 = _mm256_loadu_si256(pr.add((i + 0) * cols + j).cast::<__m256i>());
-        let r2 = _mm256_loadu_si256(pr.add((i + 2) * cols + j).cast::<__m256i>());
+        let r2 = if i + 2 < rows {
+          _mm256_loadu_si256(pr.add((i + 2) * cols + j).cast::<__m256i>())
+        } else {
+          r1
+        };
 
         _mm256_storeu_si256(
           pr.add((i + 1) * cols + j).cast::<__m256i>(),
@@ -370,7 +379,7 @@ unsafe fn debayer_red_channel(data: &[u8], rows: usize, cols: usize, r: &mut [u8
         let r1 = *pr.add((i + 0) * cols + j);
         let r2 = *pr.add((i + 2) * cols + j);
 
-        *pr.add((i + 1) * cols + j) = (r1 + r2) / 2;
+        *pr.add((i + 1) * cols + j) = ((r1 as u32 + r2 as u32) / 2) as u8;
 
         j += 1;
       }
@@ -382,12 +391,6 @@ unsafe fn debayer_red_channel(data: &[u8], rows: usize, cols: usize, r: &mut [u8
   }
 }
 
-#[allow(
-  clippy::cast_possible_wrap,
-  clippy::cast_ptr_alignment,
-  clippy::wildcard_imports,
-  clippy::identity_op
-)]
 unsafe fn debayer_green_channel(data: &[u8], rows: usize, cols: usize, g: &mut [u8]) {
   use core::arch::x86_64::*;
 
@@ -508,6 +511,13 @@ unsafe fn debayer_green_channel(data: &[u8], rows: usize, cols: usize, g: &mut [
       }
 
       while j < cols {
+        //      G5  B  G
+        // (G2)  R G1  X
+        //      G3  B G4
+        //       R G6  R
+
+        // (G)RGRGRG
+        //
         let g1 = *p.add((i + 0) * cols + j + 1);
         let g2 = if j > 0 {
           *p.add((i + 0) * cols + j - 1)
@@ -534,10 +544,13 @@ unsafe fn debayer_green_channel(data: &[u8], rows: usize, cols: usize, g: &mut [
           g1
         };
 
-        *pg.add((i + 0) * cols + j) = (g1 + g2 + g3 + g5) / 4;
+        *pg.add((i + 0) * cols + j + 0) =
+          (((g1 as u32 + g2 as u32) / 2 + (g3 as u32 + g5 as u32) / 2) / 2) as u8;
+
         *pg.add((i + 0) * cols + j + 1) = g1;
-        *pg.add((i + 1) * cols + j) = g3;
-        *pg.add((i + 1) * cols + j + 1) = (g1 + g3 + g4 + g6) / 4;
+        *pg.add((i + 1) * cols + j + 0) = g3;
+        *pg.add((i + 1) * cols + j + 1) =
+          (((g1 as u32 + g3 as u32) / 2 + (g4 as u32 + g6 as u32) / 2) / 2) as u8;
 
         j += 2;
       }
@@ -547,12 +560,6 @@ unsafe fn debayer_green_channel(data: &[u8], rows: usize, cols: usize, g: &mut [
   }
 }
 
-#[allow(
-  clippy::cast_possible_wrap,
-  clippy::cast_ptr_alignment,
-  clippy::wildcard_imports,
-  clippy::identity_op
-)]
 unsafe fn debayer_blue_channel(data: &[u8], rows: usize, cols: usize, b: &mut [u8]) {
   use core::arch::x86_64::*;
 
@@ -615,9 +622,9 @@ unsafe fn debayer_blue_channel(data: &[u8], rows: usize, cols: usize, b: &mut [u
         let b2 = *p.add((i + 1) * cols + j + 1);
         let b3 = *p.add((i + 1) * cols + j + 3);
 
-        *pb.add((i + 1) * cols + j + 0) = (b1 + b2) / 2;
+        *pb.add((i + 1) * cols + j + 0) = ((b1 as u32 + b2 as u32) / 2) as u8;
         *pb.add((i + 1) * cols + j + 1) = b2;
-        *pb.add((i + 1) * cols + j + 2) = (b2 + b3) / 2;
+        *pb.add((i + 1) * cols + j + 2) = ((b2 as u32 + b3 as u32) / 2) as u8;
         *pb.add((i + 1) * cols + j + 3) = b3;
 
         j += 4;
@@ -627,7 +634,7 @@ unsafe fn debayer_blue_channel(data: &[u8], rows: usize, cols: usize, b: &mut [u
         let b1 = *p.add((i + 1) * cols + j - 1);
         let b2 = *p.add((i + 1) * cols + j + 1);
 
-        *pb.add((i + 1) * cols + j + 0) = (b1 + b2) / 2;
+        *pb.add((i + 1) * cols + j + 0) = ((b1 as u32 + b2 as u32) / 2) as u8;
         *pb.add((i + 1) * cols + j + 1) = b2;
 
         j += 2;
@@ -667,7 +674,7 @@ unsafe fn debayer_blue_channel(data: &[u8], rows: usize, cols: usize, b: &mut [u
 
       while j < cols {
         let b4 = *pb.add((i + 1) * cols + j);
-        *pb.add((i + 0) * cols + j) = (b3 + b4) / 2;
+        *pb.add((i + 0) * cols + j) = ((b3 as u32 + b4 as u32) / 2) as u8;
 
         b3 = b4;
 
@@ -680,7 +687,6 @@ unsafe fn debayer_blue_channel(data: &[u8], rows: usize, cols: usize, b: &mut [u
 }
 
 #[test]
-#[allow(clippy::cast_possible_truncation)]
 fn test_debayer_green_channel() {
   let data: minivec::MiniVec<u8> = (0..32 * 2).map(|i| (i + 1) << (i % 2)).collect();
 
@@ -702,6 +708,28 @@ fn test_debayer_green_channel() {
       50, 57, 54, 59, 57, 61, 61, 63, 63
     ]
   );
+}
+
+#[test]
+fn test_complete_fill() {
+  let rows = 1024;
+  let cols = 1024;
+
+  let xs: minivec::MiniVec<_> = (0..rows * cols).map(|_| -> u8 { 17 }).collect();
+
+  let mut r = minivec::mini_vec![0_u8; rows * cols];
+  let mut g = minivec::mini_vec![0_u8; rows * cols];
+  let mut b = minivec::mini_vec![0_u8; rows * cols];
+
+  unsafe {
+    debayer_red_channel(&xs, rows, cols, &mut r);
+    debayer_green_channel(&xs, rows, cols, &mut g);
+    debayer_blue_channel(&xs, rows, cols, &mut b);
+  }
+
+  assert_eq!(r, minivec::mini_vec![17_u8; rows * cols]);
+  assert_eq!(g, minivec::mini_vec![17_u8; rows * cols]);
+  assert_eq!(b, minivec::mini_vec![17_u8; rows * cols]);
 }
 
 /// `demosaic_rg8_x86` converts the mosaic image into a full 3 channel color image in RGB space.

@@ -517,7 +517,7 @@ unsafe fn debayer_green_channel(data: &[u8], rows: usize, cols: usize, g: &mut [
 
         let g3 = *p.add((i + 1) * cols + j);
         let g4 = if j + 2 < cols {
-          *p.add((i + 1) + j + 2)
+          *p.add((i + 1) * cols + j + 2)
         } else {
           g3
         };

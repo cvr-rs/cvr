@@ -4,40 +4,6 @@
 extern crate cvr;
 extern crate minivec;
 
-// use cvr::convert::iter::LinearSRGBIterator;
-
-#[test]
-fn debayer_rg() {
-  let data = [1, 2, 3, 4];
-
-  let mut r = vec![0_f32; data.len()];
-  let mut g = vec![0_f32; data.len()];
-  let mut b = vec![0_f32; data.len()];
-
-  cvr::debayer::iter::DebayerRG8::new(&data, 2, 2)
-    .zip(cvr::rgb::IterMut::new(&mut r, &mut g, &mut b))
-    .for_each(|(pixel, [r, g, b])| {
-      *r = pixel[0];
-      *g = pixel[1];
-      *b = pixel[2];
-    });
-
-  assert_eq!(
-    r,
-    [0.003_921_569, 0.003_921_569, 0.003_921_569, 0.003_921_569]
-  );
-
-  assert_eq!(
-    g,
-    [0.009_803_923, 0.007_843_138, 0.011_764_707, 0.009_803_923]
-  );
-
-  assert_eq!(
-    b,
-    [0.015_686_275, 0.015_686_275, 0.015_686_275, 0.015_686_275]
-  );
-}
-
 #[test]
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn debayer_parrot() {
@@ -85,7 +51,7 @@ fn debayer_parrot() {
 
   unsafe {
     let (width, height) = (bayered_data.width(), bayered_data.height());
-    cvr::debayer::demosaic_rg8_x86(bayered_data.v(), width, height, &mut out_img);
+    cvr::debayer::demosaic_rg8(bayered_data.v(), width, height, &mut out_img);
   }
 
   cvr::png::write_rgb8(

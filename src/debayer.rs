@@ -5,266 +5,19 @@
 #![allow(
   clippy::cast_possible_wrap,
   clippy::cast_ptr_alignment,
-  clippy::wildcard_imports,
   clippy::identity_op,
   clippy::cast_possible_truncation,
   clippy::cast_lossless,
   clippy::too_many_lines,
-  clippy::missing_safety_doc,
   clippy::shadow_unrelated
 )]
 
-/// `iter` contains various iterators used for debayering images.
-///
-pub mod iter {
-  unsafe fn get(s: &[u8], idx: usize) -> f32 {
-    const NORM: f32 = 1.0 / (u8::MAX as f32);
-    let v = f32::from(*s.get_unchecked(idx));
-    v * NORM
-  }
-
-  /// `DebayerRG8` is used to work with [raw image data](https://en.wikipedia.org/wiki/Raw_image_format)
-  /// that's had a [color filter array](https://en.wikipedia.org/wiki/Color_filter_array)
-  /// applied to it and returns a 3 channel image, interpolating missing color data.
-  ///
-  pub struct DebayerRG8<'a> {
-    row_idx: usize,
-    col_idx: usize,
-    rows: usize,
-    cols: usize,
-    data: &'a [u8],
-  }
-
-  impl<'a> DebayerRG8<'a> {
-    /// `new` creates a new debayering iterator that operates on the:
-    /// ```ignore
-    /// R G
-    /// G B
-    /// ```
-    /// mosaic pattern.
-    ///
-    #[must_use]
-    pub fn new(data: &'a [u8], rows: usize, cols: usize) -> Self {
-      Self {
-        row_idx: 0,
-        col_idx: 0,
-        rows,
-        cols,
-        data,
-      }
-    }
-  }
-
-  impl<'a> std::iter::Iterator for DebayerRG8<'a> {
-    type Item = [f32; 3];
-
-    fn next(&mut self) -> Option<Self::Item> {
-      let (row_idx, col_idx) = (self.row_idx, self.col_idx);
-      let (rows, cols) = (self.rows, self.cols);
-
-      if row_idx == rows && col_idx == cols {
-        return None;
-      }
-
-      let data = self.data;
-
-      let (prev_row, curr_row, next_row) = if row_idx == 0 {
-        (1, 0, 1)
-      } else if (1..(rows - 1)).contains(&row_idx) {
-        (row_idx - 1, row_idx, row_idx + 1)
-      } else if row_idx == (rows - 1) {
-        (rows - 2, rows - 1, rows - 2)
-      } else {
-        core::unreachable!();
-      };
-
-      let (prev_col, curr_col, next_col) = if col_idx == 0 {
-        (1, 0, 1)
-      } else if (1..(cols - 1)).contains(&col_idx) {
-        (col_idx - 1, col_idx, col_idx + 1)
-      } else if col_idx == (cols - 1) {
-        (cols - 2, cols - 1, cols - 2)
-      } else {
-        core::unreachable!();
-      };
-
-      let write_idx = curr_row * cols + curr_col;
-
-      let pixel = unsafe {
-        if curr_row % 2 == 0 {
-          // even row, even column
-          //
-          if curr_col % 2 == 0 {
-            [
-              get(data, write_idx),
-              0.25
-                * (get(data, curr_row * cols + prev_col)
-                  + get(data, prev_row * cols + curr_col)
-                  + get(data, curr_row * cols + next_col)
-                  + get(data, next_row * cols + curr_col)),
-              0.25
-                * (get(data, prev_row * cols + prev_col)
-                  + get(data, prev_row * cols + next_col)
-                  + get(data, next_row * cols + prev_col)
-                  + get(data, next_row * cols + next_col)),
-            ]
-          }
-          // even row, odd column
-          //
-          else {
-            [
-              0.5 * (get(data, curr_row * cols + prev_col) + get(data, curr_row * cols + next_col)),
-              get(data, write_idx),
-              0.5 * (get(data, prev_row * cols + curr_col) + get(data, next_row * cols + curr_col)),
-            ]
-          }
-        } else {
-          // odd row, even column
-          //
-          if curr_col % 2 == 0 {
-            [
-              0.5 * (get(data, prev_row * cols + curr_col) + get(data, next_row * cols + curr_col)),
-              get(data, write_idx),
-              0.5 * (get(data, curr_row * cols + prev_col) + get(data, curr_row * cols + next_col)),
-            ]
-          }
-          // odd row, odd column
-          //
-          else {
-            [
-              0.25
-                * (get(data, prev_row * cols + prev_col)
-                  + get(data, prev_row * cols + next_col)
-                  + get(data, next_row * cols + prev_col)
-                  + get(data, next_row * cols + next_col)),
-              0.25
-                * (get(data, prev_row * cols + curr_col)
-                  + get(data, next_row * cols + curr_col)
-                  + get(data, curr_row * cols + prev_col)
-                  + get(data, curr_row * cols + next_col)),
-              get(data, write_idx),
-            ]
-          }
-        }
-      };
-
-      self.col_idx += 1;
-      if self.col_idx == cols {
-        self.row_idx += 1;
-        if self.row_idx != rows {
-          self.col_idx = 0;
-        }
-      }
-
-      Some(pixel)
-    }
-  }
-}
-
-/// `demosaic_rg8` takes an input bayered pattern and produces a packed array of pixels
-///
-pub unsafe fn demosaic_rg8(data: &[u8], width: usize, height: usize, vec: &mut [f32]) {
-  const NORM: f32 = 1.0 / (u8::MAX as f32);
-
-  let cols = width;
-  let rows = height;
-
-  let mut tmp = [0_u8; 16];
-
-  let mut row_idx = 2;
-  while row_idx < (rows - 2) {
-    let mut col_idx = 2;
-    while col_idx < (cols - 2) {
-      let bufs = [
-        std::slice::from_raw_parts_mut(tmp.as_mut_ptr(), 4),
-        std::slice::from_raw_parts_mut(tmp.as_mut_ptr().add(4), 4),
-        std::slice::from_raw_parts_mut(tmp.as_mut_ptr().add(8), 4),
-        std::slice::from_raw_parts_mut(tmp.as_mut_ptr().add(12), 4),
-      ];
-
-      {
-        let row_idx = row_idx - 1;
-        std::ptr::copy_nonoverlapping(
-          data.as_ptr().add(row_idx * cols + (col_idx - 1)),
-          bufs[0].as_mut_ptr(),
-          4,
-        );
-      }
-
-      {
-        std::ptr::copy_nonoverlapping(
-          data.as_ptr().add(row_idx * cols + (col_idx - 1)),
-          bufs[1].as_mut_ptr(),
-          4,
-        );
-      }
-
-      {
-        let row_idx = row_idx + 1;
-        std::ptr::copy_nonoverlapping(
-          data.as_ptr().add(row_idx * cols + (col_idx - 1)),
-          bufs[2].as_mut_ptr(),
-          4,
-        );
-      }
-
-      {
-        let row_idx = row_idx + 2;
-        std::ptr::copy_nonoverlapping(
-          data.as_ptr().add(row_idx * cols + (col_idx - 1)),
-          bufs[3].as_mut_ptr(),
-          4,
-        );
-      }
-
-      let mut tmpf = [0_f32; 16];
-      tmp
-        .iter()
-        .copied()
-        .zip(tmpf.iter_mut())
-        .for_each(|(x, out)| *out = f32::from(x) * NORM);
-
-      // write out the (0, 0) portion of the tile
-      //
-      let out_idx = 3 * (row_idx * cols + col_idx);
-
-      *vec.as_mut_ptr().add(out_idx) = tmpf[5];
-      *vec.as_mut_ptr().add(out_idx + 1) = 0.25 * (tmpf[1] + tmpf[4] + tmpf[6] + tmpf[9]);
-      *vec.as_mut_ptr().add(out_idx + 2) = 0.25 * (tmpf[0] + tmpf[2] + tmpf[8] + tmpf[10]);
-
-      // write out the (0, 1) portion of the tile
-      //
-      let out_idx = 3 * (row_idx * cols + col_idx + 1);
-
-      *vec.as_mut_ptr().add(out_idx) = 0.5 * (tmpf[5] + tmpf[7]);
-      *vec.as_mut_ptr().add(out_idx + 1) = tmpf[6];
-      *vec.as_mut_ptr().add(out_idx + 2) = 0.5 * (tmpf[2] + tmpf[10]);
-
-      // write out the (1, 0) portion of the tile
-      //
-      let out_idx = 3 * ((row_idx + 1) * cols + col_idx);
-
-      *vec.as_mut_ptr().add(out_idx) = 0.5 * (tmpf[5] + tmpf[13]);
-      *vec.as_mut_ptr().add(out_idx + 1) = tmpf[9];
-      *vec.as_mut_ptr().add(out_idx + 2) = 0.5 * (tmpf[8] + tmpf[10]);
-
-      // write out the (1, 1) portion of the tile
-      //
-      let out_idx = 3 * ((row_idx + 1) * cols + col_idx + 1);
-
-      *vec.as_mut_ptr().add(out_idx) = 0.25 * (tmpf[5] + tmpf[7] + tmpf[13] + tmpf[15]);
-      *vec.as_mut_ptr().add(out_idx + 1) = 0.25 * (tmpf[6] + tmpf[9] + tmpf[11] + tmpf[14]);
-      *vec.as_mut_ptr().add(out_idx + 2) = tmpf[10];
-
-      col_idx += 2;
-    }
-
-    row_idx += 2;
-  }
-}
-
 unsafe fn debayer_red_channel(data: &[u8], rows: usize, cols: usize, r: &mut [u8]) {
-  use core::arch::x86_64::*;
+  use core::arch::x86_64::{
+    __m128i, __m256i, _mm256_avg_epu8, _mm256_loadu_si256, _mm256_storeu_si256, _mm_and_si128,
+    _mm_avg_epu8, _mm_loadu_si128, _mm_or_si128, _mm_set1_epi16, _mm_slli_si128, _mm_srli_si128,
+    _mm_storeu_si128,
+  };
 
   debug_assert!(rows >= 2);
   debug_assert!(cols >= 2);
@@ -392,7 +145,10 @@ unsafe fn debayer_red_channel(data: &[u8], rows: usize, cols: usize, r: &mut [u8
 }
 
 unsafe fn debayer_green_channel(data: &[u8], rows: usize, cols: usize, g: &mut [u8]) {
-  use core::arch::x86_64::*;
+  use core::arch::x86_64::{
+    __m128i, _mm_and_si128, _mm_avg_epu8, _mm_loadu_si128, _mm_or_si128, _mm_set1_epi16,
+    _mm_setr_epi8, _mm_slli_si128, _mm_srli_si128, _mm_storeu_si128,
+  };
 
   debug_assert!(rows >= 2);
   debug_assert!(cols >= 2);
@@ -561,7 +317,11 @@ unsafe fn debayer_green_channel(data: &[u8], rows: usize, cols: usize, g: &mut [
 }
 
 unsafe fn debayer_blue_channel(data: &[u8], rows: usize, cols: usize, b: &mut [u8]) {
-  use core::arch::x86_64::*;
+  use core::arch::x86_64::{
+    __m128i, __m256i, _mm256_avg_epu8, _mm256_loadu_si256, _mm256_storeu_si256, _mm_and_si128,
+    _mm_avg_epu8, _mm_loadu_si128, _mm_or_si128, _mm_set1_epi16, _mm_slli_si128, _mm_srli_si128,
+    _mm_storeu_si128,
+  };
 
   debug_assert!(rows >= 2);
   debug_assert!(cols >= 2);
@@ -732,11 +492,11 @@ fn test_complete_fill() {
   assert_eq!(b, minivec::mini_vec![17_u8; rows * cols]);
 }
 
-/// `demosaic_rg8_x86` converts the mosaic image into a full 3 channel color image in RGB space.
+/// `demosaic_rg8` converts the mosaic image into a full 3 channel color image in RGB space.
 ///
 /// # Safety
 ///
-pub unsafe fn demosaic_rg8_x86(
+pub unsafe fn demosaic_rg8(
   data: &[u8],
   width: usize,
   height: usize,

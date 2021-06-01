@@ -10,7 +10,7 @@ fn debayer_rg8(bencher: &mut test::bench::Bencher) {
 
   let mut img = cvr::rgb::Image::default();
   unsafe {
-    cvr::debayer::demosaic_rg8_x86(
+    cvr::debayer::demosaic_rg8(
       &bayered_data.v(),
       bayered_data.width(),
       bayered_data.height(),
@@ -19,7 +19,7 @@ fn debayer_rg8(bencher: &mut test::bench::Bencher) {
   };
 
   bencher.iter(|| unsafe {
-    cvr::debayer::demosaic_rg8_x86(
+    cvr::debayer::demosaic_rg8(
       &bayered_data.v(),
       bayered_data.width(),
       bayered_data.height(),

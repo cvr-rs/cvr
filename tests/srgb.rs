@@ -38,7 +38,7 @@ fn srgb_to_linear_to_srgb() {
   let mut green_srgb = [0_u8; 3];
   let mut blue_srgb = [0_u8; 3];
 
-  cvr::rgb::Iter::new(&r, &g, &b)
+  cvr::rgb::make_iter(&r, &g, &b)
     .srgb_to_linear()
     .enumerate()
     .map(|(idx, [r, g, b])| {
@@ -82,7 +82,7 @@ fn srgb_to_gray() {
   let g = [4_u8, 5, 6];
   let b = [7_u8, 8, 9];
 
-  let gray: Vec<f32> = cvr::rgb::Iter::new(&r, &g, &b)
+  let gray: Vec<f32> = cvr::rgb::make_iter(&r, &g, &b)
     .srgb_to_linear()
     .linear_to_gray()
     .collect();
@@ -92,7 +92,7 @@ fn srgb_to_gray() {
     &[0.001_086_22, 0.001_389_747, 0.001_693_273_9]
   ));
 
-  let gray: Vec<u8> = cvr::rgb::Iter::new(&r, &g, &b)
+  let gray: Vec<u8> = cvr::rgb::make_iter(&r, &g, &b)
     .srgb_to_linear()
     .linear_to_gray()
     .map(cvr::convert::linear_to_srgb)

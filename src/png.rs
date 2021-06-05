@@ -73,18 +73,20 @@ where
   let mut b = minivec::mini_vec![0_u8; size];
   let mut a = minivec::mini_vec![0_u8; size];
 
-  let mut rgba_iter = rgba::IterMut::new(&mut r, &mut g, &mut b, &mut a);
+  {
+    let mut rgba_iter = rgba::make_iter_mut(&mut r, &mut g, &mut b, &mut a);
 
-  while let Some(row) = png_reader.next_row()? {
-    row
-      .chunks_exact(num_channels)
-      .zip(&mut rgba_iter)
-      .for_each(|(chunk, [r, g, b, a])| {
-        *r = chunk[0];
-        *g = chunk[1];
-        *b = chunk[2];
-        *a = chunk[3];
-      });
+    while let Some(row) = png_reader.next_row()? {
+      row
+        .chunks_exact(num_channels)
+        .zip(&mut rgba_iter)
+        .for_each(|(chunk, [r, g, b, a])| {
+          *r = chunk[0];
+          *g = chunk[1];
+          *b = chunk[2];
+          *a = chunk[3];
+        });
+    }
   }
 
   Ok(rgba::Image {
@@ -140,17 +142,19 @@ where
   let mut g = minivec::mini_vec![0_u8; size];
   let mut b = minivec::mini_vec![0_u8; size];
 
-  let mut rgb_iter = rgb::IterMut::new(&mut r, &mut g, &mut b);
+  {
+    let mut rgb_iter = crate::rgb::make_iter_mut(&mut r, &mut g, &mut b);
 
-  while let Some(row) = png_reader.next_row()? {
-    row
-      .chunks_exact(num_channels)
-      .zip(&mut rgb_iter)
-      .for_each(|(chunk, [r, g, b])| {
-        *r = chunk[0];
-        *g = chunk[1];
-        *b = chunk[2];
-      });
+    while let Some(row) = png_reader.next_row()? {
+      row
+        .chunks_exact(num_channels)
+        .zip(&mut rgb_iter)
+        .for_each(|(chunk, [r, g, b])| {
+          *r = chunk[0];
+          *g = chunk[1];
+          *b = chunk[2];
+        });
+    }
   }
 
   Ok(rgb::Image {

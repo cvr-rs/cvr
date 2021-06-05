@@ -68,150 +68,51 @@ where
     self.h
   }
 
-  /// `rgba_iter` returns a `cvr::rgba::Iter` to the underlying image data.
+  /// `rgba_iter` returns an iterator that traverses the planar image data in a row-major ordering, yielding each pixel
+  /// as a `[T; 4]`.
   ///
-  #[must_use]
-  pub fn rgba_iter(&self) -> Iter<'_, T> {
-    Iter::new(&self.r, &self.g, &self.b, &self.a)
+
+  pub fn rgba_iter(&self) -> impl Iterator<Item = [T; 4]> + '_ {
+    make_iter(&self.r, &self.g, &self.b, &self.a)
   }
 
-  /// `rgb_iter` returns a `cvr::rgb::Iter` to the underlying image data.
+  /// `rgb_iter` returns an iterator that traverses the planar image data in a row-major ordering, yielding each pixel
+  /// as a `[T; 3]`.
   ///
-  #[must_use]
-  pub fn rgb_iter(&self) -> crate::rgb::Iter<'_, T> {
-    crate::rgb::Iter::new(&self.r, &self.g, &self.b)
+  pub fn rgb_iter(&self) -> impl Iterator<Item = [T; 3]> + '_ {
+    crate::rgb::make_iter(&self.r, &self.g, &self.b)
   }
 }
 
-/// `Iter` enables the simultaneous traversal of 4 separate channels of image data. It works
-/// with any type that can be converted to a `&[Numeric]`. Image data is returned pixel-by-pixel
-/// in a `[N; 4]` format with `(R, G, B, A)` ordering.
+/// `make_iter` returns an iterator that traverses the planar image data in a row-major ordering, yielding each pixel
+/// as a `[T; 4]`.
 ///
-pub struct Iter<'a, N>
-where
-  N: Numeric,
-{
-  r: std::slice::Iter<'a, N>,
-  g: std::slice::Iter<'a, N>,
-  b: std::slice::Iter<'a, N>,
-  a: std::slice::Iter<'a, N>,
+pub fn make_iter<'a, T: Numeric>(
+  r: &'a [T],
+  g: &'a [T],
+  b: &'a [T],
+  a: &'a [T],
+) -> impl Iterator<Item = [T; 4]> + 'a {
+  r.iter()
+    .copied()
+    .zip(g.iter().copied())
+    .zip(b.iter().copied())
+    .zip(a.iter().copied())
+    .map(|(((x, y), z), w)| [x, y, z, w])
 }
 
-/// `new` constructs a new `Iter` using the backing `&[N]` of the types passed in by the user.
+/// `make_iter_mut` returns an iterator that traverses the planar image data in a row-major ordering, yielding each
+/// pixel as a `[&mut T; 4]` so that the underlying pixel values can be manipulated.
 ///
-/// # Example
-/// ```
-/// let r = vec![1, 2, 3];
-/// let g = vec![4, 5, 6];
-/// let b = vec![7, 8, 9];
-/// let a = vec![255, 255, 255];
-///
-/// let rgb_iter = cvr::rgba::Iter::new(&r, &g, &b, &a);
-/// ```
-///
-impl<'a, N> Iter<'a, N>
-where
-  N: Numeric,
-{
-  /// `new` returns an [`Iter`] that traverses the provided slices.
-  ///
-  pub fn new<R>(r: &'a R, g: &'a R, b: &'a R, a: &'a R) -> Self
-  where
-    R: std::convert::AsRef<[N]>,
-  {
-    Self {
-      r: r.as_ref().iter(),
-      g: g.as_ref().iter(),
-      b: b.as_ref().iter(),
-      a: a.as_ref().iter(),
-    }
-  }
-}
-
-impl<'a, N> std::iter::Iterator for Iter<'a, N>
-where
-  N: Numeric,
-{
-  type Item = [N; 4];
-
-  fn next(&mut self) -> Option<Self::Item> {
-    match (self.r.next(), self.g.next(), self.b.next(), self.a.next()) {
-      (Some(r), Some(g), Some(b), Some(a)) => Some([*r, *g, *b, *a]),
-      _ => None,
-    }
-  }
-}
-
-/// `IterMut` enables the simultaneous traversal of 4 separate channels of image data. It works
-/// with any type that can be converted to a `&mut [Numeric]`. Image data is returned pixel-by-pixel
-/// in a `[&'a mut T; 4]` format with `(R, G, B, A)` ordering.
-///
-pub struct IterMut<'a, T>
-where
-  T: Numeric,
-{
-  r: std::slice::IterMut<'a, T>,
-  g: std::slice::IterMut<'a, T>,
-  b: std::slice::IterMut<'a, T>,
-  a: std::slice::IterMut<'a, T>,
-}
-
-impl<'a, T> IterMut<'a, T>
-where
-  T: Numeric,
-{
-  /// `new` constructs a new `IterMut` over the backing `&'a mut [T]` of each `&'a mut U` supplied by the user.
-  ///
-  /// # Example
-  /// ```
-  /// let mut r = vec![0_u8; 2];
-  /// let mut g = vec![0_u8; 2];
-  /// let mut b = vec![0_u8; 2];
-  /// let mut a = vec![0_u8; 2];
-  ///
-  /// let rgb_iter = cvr::rgba::IterMut::new(&mut r, &mut g, &mut b, &mut a);
-  ///
-  /// let pixels = [1, 2, 3, 4, 5, 6]; // assume only 2 pixels in the buffer (packed representation)
-  /// pixels
-  ///   .chunks_exact(3)
-  ///   .zip(rgb_iter)
-  ///   .for_each(|(chunk, [r, g, b, a])| {
-  ///     *r = chunk[0];
-  ///     *g = chunk[1];
-  ///     *b = chunk[2];
-  ///     *a = 128;
-  ///   });
-  ///
-  /// assert_eq!(r, [1, 4]);
-  /// assert_eq!(g, [2, 5]);
-  /// assert_eq!(b, [3, 6]);
-  /// assert_eq!(a, [128, 128]);
-  ///
-  /// ```
-  ///
-  pub fn new<U>(r: &'a mut U, g: &'a mut U, b: &'a mut U, a: &'a mut U) -> Self
-  where
-    U: std::convert::AsMut<[T]>,
-  {
-    Self {
-      r: r.as_mut().iter_mut(),
-      g: g.as_mut().iter_mut(),
-      b: b.as_mut().iter_mut(),
-      a: a.as_mut().iter_mut(),
-    }
-  }
-}
-
-impl<'a, T> std::iter::Iterator for IterMut<'a, T>
-where
-  T: Numeric,
-{
-  type Item = [&'a mut T; 4];
-
-  fn next(&mut self) -> Option<Self::Item> {
-    match (self.r.next(), self.g.next(), self.b.next(), self.a.next()) {
-      (Some(r), Some(g), Some(b), Some(a)) => Some([r, g, b, a]),
-      _ => None,
-    }
-  }
+pub fn make_iter_mut<'a, T: Numeric>(
+  r: &'a mut [T],
+  g: &'a mut [T],
+  b: &'a mut [T],
+  a: &'a mut [T],
+) -> impl Iterator<Item = [&'a mut T; 4]> {
+  r.iter_mut()
+    .zip(g.iter_mut())
+    .zip(b.iter_mut())
+    .zip(a.iter_mut())
+    .map(|(((x, y), z), w)| [x, y, z, w])
 }

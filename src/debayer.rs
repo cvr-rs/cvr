@@ -446,29 +446,29 @@ unsafe fn debayer_blue_channel(data: &[u8], rows: usize, cols: usize, b: &mut [u
   }
 }
 
-#[test]
-fn test_debayer_green_channel() {
-  let data: minivec::MiniVec<u8> = (0..32 * 2).map(|i| (i + 1) << (i % 2)).collect();
+// #[test]
+// fn test_debayer_green_channel() {
+//   let data: minivec::MiniVec<u8> = (0..32 * 2).map(|i| (i + 1) << (i % 2)).collect();
 
-  let mut out = minivec::mini_vec![0_u8; data.len()];
-  unsafe { debayer_green_channel(&data, 2, 32, &mut out) };
+//   let mut out = minivec::mini_vec![0_u8; data.len()];
+//   unsafe { debayer_green_channel(&data, 2, 32, &mut out) };
 
-  assert_eq!(
-    out[0..32],
-    [
-      19, 4, 21, 8, 24, 12, 27, 16, 30, 20, 33, 24, 36, 28, 39, 32, 41, 36, 44, 40, 47, 44, 50, 48,
-      53, 52, 56, 56, 59, 60, 62, 64
-    ]
-  );
+//   assert_eq!(
+//     out[0..32],
+//     [
+//       19, 4, 21, 8, 24, 12, 27, 16, 30, 20, 33, 24, 36, 28, 39, 32, 41, 36, 44, 40, 47, 44, 50, 48,
+//       53, 52, 56, 56, 59, 60, 62, 64
+//     ]
+//   );
 
-  assert_eq!(
-    out[32..],
-    [
-      33, 19, 35, 22, 37, 25, 39, 28, 41, 31, 43, 34, 45, 37, 47, 40, 49, 40, 51, 43, 53, 47, 55,
-      50, 57, 54, 59, 57, 61, 61, 63, 63
-    ]
-  );
-}
+//   assert_eq!(
+//     out[32..],
+//     [
+//       33, 19, 35, 22, 37, 25, 39, 28, 41, 31, 43, 34, 45, 37, 47, 40, 49, 40, 51, 43, 53, 47, 55,
+//       50, 57, 54, 59, 57, 61, 61, 63, 63
+//     ]
+//   );
+// }
 
 #[test]
 fn test_complete_fill() {

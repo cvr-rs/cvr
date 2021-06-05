@@ -31,7 +31,7 @@
 //! let g = [4u8, 5, 6];
 //! let b = [7u8, 8, 9];
 //!
-//! cvr::rgb::Iter::new(&r, &g, &b)
+//! cvr::rgb::make_iter(&r, &g, &b)
 //!     .srgb_to_linear()
 //!     .enumerate()
 //!     .for_each(|(idx, [r, g, b])| {

@@ -1,4 +1,4 @@
-//! `png` contains routines that enable users to read and write `PNG` files. It wraps the [`png`](https://crates.io/crates/png)
+//! `png` contains routines that enable users to read and write `PNG` files. It wraps the [png](https://crates.io/crates/png)
 //! crate and returns errors directly from the library where further documentation can be found on
 //! the precise nature of the `DecodingError` and the `EncodingError`.
 //!

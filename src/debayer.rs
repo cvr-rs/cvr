@@ -14,9 +14,8 @@
 
 unsafe fn debayer_red_channel(data: &[u8], rows: usize, cols: usize, r: &mut [u8]) {
   use core::arch::x86_64::{
-    __m128i, __m256i, _mm256_avg_epu8, _mm256_loadu_si256, _mm256_storeu_si256, _mm_and_si128,
-    _mm_avg_epu8, _mm_loadu_si128, _mm_or_si128, _mm_set1_epi16, _mm_slli_si128, _mm_srli_si128,
-    _mm_storeu_si128,
+    __m128i, _mm_and_si128, _mm_avg_epu8, _mm_loadu_si128, _mm_or_si128, _mm_set1_epi16,
+    _mm_slli_si128, _mm_srli_si128, _mm_storeu_si128,
   };
 
   debug_assert!(rows >= 2);
@@ -112,20 +111,20 @@ unsafe fn debayer_red_channel(data: &[u8], rows: usize, cols: usize, r: &mut [u8
     while i < rows {
       let mut j = 0;
 
-      while j + 32 <= cols {
-        let r1 = _mm256_loadu_si256(pr.add((i + 0) * cols + j).cast::<__m256i>());
+      while j + 16 <= cols {
+        let r1 = _mm_loadu_si128(pr.add((i + 0) * cols + j).cast::<__m128i>());
         let r2 = if i + 2 < rows {
-          _mm256_loadu_si256(pr.add((i + 2) * cols + j).cast::<__m256i>())
+          _mm_loadu_si128(pr.add((i + 2) * cols + j).cast::<__m128i>())
         } else {
           r1
         };
 
-        _mm256_storeu_si256(
-          pr.add((i + 1) * cols + j).cast::<__m256i>(),
-          _mm256_avg_epu8(r1, r2),
+        _mm_storeu_si128(
+          pr.add((i + 1) * cols + j).cast::<__m128i>(),
+          _mm_avg_epu8(r1, r2),
         );
 
-        j += 32;
+        j += 16;
       }
 
       while j < cols {
@@ -318,9 +317,8 @@ unsafe fn debayer_green_channel(data: &[u8], rows: usize, cols: usize, g: &mut [
 
 unsafe fn debayer_blue_channel(data: &[u8], rows: usize, cols: usize, b: &mut [u8]) {
   use core::arch::x86_64::{
-    __m128i, __m256i, _mm256_avg_epu8, _mm256_loadu_si256, _mm256_storeu_si256, _mm_and_si128,
-    _mm_avg_epu8, _mm_loadu_si128, _mm_or_si128, _mm_set1_epi16, _mm_slli_si128, _mm_srli_si128,
-    _mm_storeu_si128,
+    __m128i, _mm_and_si128, _mm_avg_epu8, _mm_loadu_si128, _mm_or_si128, _mm_set1_epi16,
+    _mm_slli_si128, _mm_srli_si128, _mm_storeu_si128,
   };
 
   debug_assert!(rows >= 2);
@@ -411,19 +409,19 @@ unsafe fn debayer_blue_channel(data: &[u8], rows: usize, cols: usize, b: &mut [u
     while i + 1 < rows {
       let mut j = 0;
 
-      while j + 32 <= cols {
+      while j + 16 <= cols {
         let b1 = if i == 0 {
-          _mm256_loadu_si256(pb.add((1) * cols + j).cast::<__m256i>())
+          _mm_loadu_si128(pb.add((1) * cols + j).cast::<__m128i>())
         } else {
-          _mm256_loadu_si256(pb.add((i - 1) * cols + j).cast::<__m256i>())
+          _mm_loadu_si128(pb.add((i - 1) * cols + j).cast::<__m128i>())
         };
 
-        let b2 = _mm256_loadu_si256(pb.add((i + 1) * cols + j).cast::<__m256i>());
-        let b3 = _mm256_avg_epu8(b1, b2);
+        let b2 = _mm_loadu_si128(pb.add((i + 1) * cols + j).cast::<__m128i>());
+        let b3 = _mm_avg_epu8(b1, b2);
 
-        _mm256_storeu_si256(pb.add((i + 0) * cols + j).cast::<__m256i>(), b3);
+        _mm_storeu_si128(pb.add((i + 0) * cols + j).cast::<__m128i>(), b3);
 
-        j += 32;
+        j += 16;
       }
 
       let mut b3 = if i == 0 {

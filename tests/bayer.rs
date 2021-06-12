@@ -4,6 +4,8 @@
 extern crate cvr;
 extern crate minivec;
 
+use cvr::convert::iter::LinearSRGBIterator;
+
 #[test]
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn debayer_parrot() {
@@ -47,22 +49,16 @@ fn debayer_parrot() {
     cvr::png::read_gray8(std::fs::File::open("tests/images/output/bayered-parrot.png").unwrap())
       .unwrap();
 
-  let mut out_img = cvr::rgb::Image::new();
+  let mut out_img = cvr::rgb::Image::<f32>::new();
 
   unsafe {
     let (width, height) = (bayered_data.width(), bayered_data.height());
-    cvr::debayer::demosaic_rg8(bayered_data.v(), width, height, &mut out_img);
+    cvr::debayer::demosaic_rg8_f32(bayered_data.v(), width, height, &mut out_img);
   }
 
   cvr::png::write_rgb8(
     std::fs::File::create("tests/images/output/debayered-parrot.png").unwrap(),
-    out_img.rgb_iter().map(|[r, g, b]| {
-      [
-        cvr::convert::linear_to_srgb(f32::from(r) / 255.0),
-        cvr::convert::linear_to_srgb(f32::from(g) / 255.0),
-        cvr::convert::linear_to_srgb(f32::from(b) / 255.0),
-      ]
-    }),
+    out_img.rgb_iter().linear_to_srgb(),
     bayered_data.width(),
     bayered_data.height(),
   )

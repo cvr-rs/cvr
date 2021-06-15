@@ -88,6 +88,30 @@ where
   pub fn total(&self) -> usize {
     self.width() * self.height()
   }
+
+  /// `resize` readjusts the internal image buffers until their size is _at least_ `width * height` number of elements
+  /// and resets the internal `width` and `height` data members.
+  ///
+  /// Does not allocate if the buffers are already large enough.
+  ///
+  /// `Default`-initializes the elements.
+  ///
+  #[must_use]
+  pub fn resize(self, width: usize, height: usize) -> Image<T> {
+    let (mut r, mut g, mut b) = (self.r, self.g, self.b);
+
+    r.resize(width * height, Default::default());
+    g.resize(width * height, Default::default());
+    b.resize(width * height, Default::default());
+
+    Image {
+      r,
+      g,
+      b,
+      h: height,
+      w: width,
+    }
+  }
 }
 
 /// `make_iter` returns an iterator that traverses the planar image data in a row-major ordering, yielding each pixel

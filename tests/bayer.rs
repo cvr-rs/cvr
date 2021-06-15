@@ -49,12 +49,15 @@ fn debayer_parrot() {
     cvr::png::read_gray8(std::fs::File::open("tests/images/output/bayered-parrot.png").unwrap())
       .unwrap();
 
+  let mut debayered = cvr::rgb::Image::<u8>::new();
   let mut out_img = cvr::rgb::Image::<f32>::new();
 
   unsafe {
     let (width, height) = (bayered_data.width(), bayered_data.height());
-    cvr::debayer::demosaic_rg8_f32(bayered_data.v(), width, height, &mut out_img);
+    cvr::debayer::demosaic_rg8(bayered_data.v(), width, height, &mut debayered);
   }
+
+  cvr::rgb::cvt_u8_to_f32(&debayered, &mut out_img);
 
   cvr::png::write_rgb8(
     std::fs::File::create("tests/images/output/debayered-parrot.png").unwrap(),

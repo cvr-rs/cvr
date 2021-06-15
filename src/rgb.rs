@@ -142,3 +142,22 @@ pub fn make_iter_mut<'a, T: Numeric>(
     .zip(b.iter_mut())
     .map(|((x, y), z)| [x, y, z])
 }
+
+/// `cvt_u8_to_f32` converts the current 8-bit image into floating point, normalizing the channel values to the range
+/// `[0.0, 1.0]`.
+///
+pub fn cvt_u8_to_f32(x: &Image<u8>, y: &mut Image<f32>) {
+  const N: f32 = 1.0 / 255.0;
+
+  x.r.iter().copied().zip(y.r.iter_mut()).for_each(|(x, y)| {
+    *y = N * f32::from(x);
+  });
+
+  x.g.iter().copied().zip(y.g.iter_mut()).for_each(|(x, y)| {
+    *y = N * f32::from(x);
+  });
+
+  x.b.iter().copied().zip(y.b.iter_mut()).for_each(|(x, y)| {
+    *y = N * f32::from(x);
+  });
+}

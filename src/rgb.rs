@@ -96,21 +96,13 @@ where
   ///
   /// `Default`-initializes the elements.
   ///
-  #[must_use]
-  pub fn resize(self, width: usize, height: usize) -> Image<T> {
-    let (mut r, mut g, mut b) = (self.r, self.g, self.b);
+  pub fn resize(&mut self, width: usize, height: usize) {
+    self.r.resize(width * height, Default::default());
+    self.g.resize(width * height, Default::default());
+    self.b.resize(width * height, Default::default());
 
-    r.resize(width * height, Default::default());
-    g.resize(width * height, Default::default());
-    b.resize(width * height, Default::default());
-
-    Image {
-      r,
-      g,
-      b,
-      h: height,
-      w: width,
-    }
+    self.h = height;
+    self.w = width;
   }
 }
 
@@ -149,15 +141,17 @@ pub fn make_iter_mut<'a, T: Numeric>(
 pub fn cvt_u8_to_f32(x: &Image<u8>, y: &mut Image<f32>) {
   const N: f32 = 1.0 / 255.0;
 
-  x.r.iter().copied().zip(y.r.iter_mut()).for_each(|(x, y)| {
-    *y = N * f32::from(x);
+  y.resize(x.width(), x.height());
+
+  x.r.iter().copied().zip(y.r.iter_mut()).for_each(|(b, f)| {
+    *f = N * f32::from(b);
   });
 
-  x.g.iter().copied().zip(y.g.iter_mut()).for_each(|(x, y)| {
-    *y = N * f32::from(x);
+  x.g.iter().copied().zip(y.g.iter_mut()).for_each(|(b, f)| {
+    *f = N * f32::from(b);
   });
 
-  x.b.iter().copied().zip(y.b.iter_mut()).for_each(|(x, y)| {
-    *y = N * f32::from(x);
+  x.b.iter().copied().zip(y.b.iter_mut()).for_each(|(b, f)| {
+    *f = N * f32::from(b);
   });
 }

@@ -9,14 +9,9 @@ fn debayer_rg8(bencher: &mut test::bench::Bencher) {
       .unwrap();
 
   let mut img = cvr::rgb::Image::default();
-  unsafe {
-    cvr::debayer::demosaic_rg8(
-      &bayered_data.v(),
-      bayered_data.width(),
-      bayered_data.height(),
-      &mut img,
-    )
-  };
+
+  let (width, height) = (bayered_data.width(), bayered_data.height());
+  img.resize(width, height);
 
   bencher.iter(|| unsafe {
     cvr::debayer::demosaic_rg8(
@@ -37,14 +32,8 @@ fn debayer_rg8_to_f32(bencher: &mut test::bench::Bencher) {
   let mut debayered = cvr::rgb::Image::default();
   let mut img = cvr::rgb::Image::default();
 
-  unsafe {
-    cvr::debayer::demosaic_rg8(
-      &bayered_data.v(),
-      bayered_data.width(),
-      bayered_data.height(),
-      &mut debayered,
-    )
-  };
+  let (width, height) = (bayered_data.width(), bayered_data.height());
+  debayered.resize(width, height);
 
   bencher.iter(|| unsafe {
     cvr::debayer::demosaic_rg8(

@@ -31,9 +31,7 @@ pub unsafe fn demosaic_rg8(
 ) {
   debug_assert!(data.len() >= width * height);
 
-  img.r.resize(width * height, 0);
-  img.g.resize(width * height, 0);
-  img.b.resize(width * height, 0);
+  img.resize(width, height);
 
   let (rows, cols) = (height, width);
   debayer_red_channel(data, rows, cols, &mut img.r);

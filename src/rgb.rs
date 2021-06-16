@@ -94,7 +94,8 @@ where
   ///
   /// Does not allocate if the buffers are already large enough.
   ///
-  /// `Default`-initializes the elements.
+  /// `Default`-initializes new elements and doesnot attempt to preserve the quality of the underlying image. This
+  /// operation, while safe, should be considered destructive for the image data itself.
   ///
   pub fn resize(&mut self, width: usize, height: usize) {
     self.r.resize(width * height, Default::default());

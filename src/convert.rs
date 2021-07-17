@@ -169,8 +169,8 @@ pub fn linear_to_srgb(u: f32) -> u8 {
 ///
 #[must_use]
 #[allow(clippy::mistyped_literal_suffixes)]
-pub fn linear_to_gray(rgb: [f32; 3]) -> f32 {
-  0.212_639 * rgb[0] + 0.715_168_7 * rgb[1] + 0.072_192_32 * rgb[2]
+pub fn linear_to_gray([r, g, b]: [f32; 3]) -> f32 {
+  0.212_639 * r + 0.715_168_7 * g + 0.072_192_32 * b
 }
 
 /// `linear_to_hsv` takes the provided linearized `RGB` pixel values and converts them to their

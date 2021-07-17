@@ -9,7 +9,7 @@ use crate::Numeric;
 /// allocation which enables such things as constant-time channel swapping along with making the
 /// data cheaper to copy to a GPU which expects `CHW` ordering vs the packed format `HWC`.
 ///
-#[derive(Default)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct Image<T>
 where
   T: Numeric,
@@ -51,6 +51,12 @@ where
   #[must_use]
   pub fn b(&self) -> &[T] {
     self.b.as_slice()
+  }
+
+  /// `rgb_mut` returns a tuple containing mutable references to the underlying image data in `RGB` ordering.
+  ///
+  pub fn rgb_mut(&mut self) -> (&mut [T], &mut [T], &mut [T]) {
+    (&mut self.r, &mut self.g, &mut self.b)
   }
 
   /// `width` returns the number of columns in the image.
@@ -104,6 +110,74 @@ where
 
     self.h = height;
     self.w = width;
+  }
+}
+
+impl Image<u8> {
+  /// `to_linear` will take the input 8-bit `sRGB` image and convert it to its linear floating point representation.
+  ///
+  /// If `out` is not appropriately sized, it will be resized accordingly. This will include truncating when the actual
+  /// length of the internal buffers exceed `&self`'s internal buffer length and expanding when the internal
+  /// buffers of `out` are too small.
+  ///
+  pub fn to_linear(&self, out: &mut Image<f32>) {
+    let (width, height) = (self.w, self.h);
+    out.resize(width, height);
+
+    self
+      .r
+      .iter()
+      .copied()
+      .zip(out.r.iter_mut())
+      .for_each(|(r8, r)| *r = crate::convert::srgb_to_linear(r8));
+
+    self
+      .g
+      .iter()
+      .copied()
+      .zip(out.g.iter_mut())
+      .for_each(|(g8, g)| *g = crate::convert::srgb_to_linear(g8));
+
+    self
+      .b
+      .iter()
+      .copied()
+      .zip(out.b.iter_mut())
+      .for_each(|(b8, b)| *b = crate::convert::srgb_to_linear(b8));
+  }
+}
+
+impl Image<f32> {
+  /// `to_srgb` will take the input 32 bit floating point image data and then convert it to its 8-bit `sRGB`
+  /// represenation.
+  ///
+  /// If `out` is not appropriately sized, it will be resized accordingly. This will include truncating when the actual
+  /// length of the internal buffers exceed `&self`'s internal buffer length and expanding when the internal
+  /// buffers of `out` are too small.
+  ///
+  pub fn to_srgb(&self, out: &mut Image<u8>) {
+    let (width, height) = (self.w, self.h);
+    out.resize(width, height);
+    self
+      .r
+      .iter()
+      .copied()
+      .zip(out.r.iter_mut())
+      .for_each(|(r32, r)| *r = crate::convert::linear_to_srgb(r32));
+
+    self
+      .g
+      .iter()
+      .copied()
+      .zip(out.g.iter_mut())
+      .for_each(|(g32, g)| *g = crate::convert::linear_to_srgb(g32));
+
+    self
+      .b
+      .iter()
+      .copied()
+      .zip(out.b.iter_mut())
+      .for_each(|(b32, b)| *b = crate::convert::linear_to_srgb(b32));
   }
 }
 

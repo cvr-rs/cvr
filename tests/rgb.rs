@@ -33,3 +33,33 @@ fn rgb_resize() {
   assert_eq!(img.height(), big_height);
   assert_eq!(img.width(), big_width);
 }
+
+#[test]
+fn rgb_to_linear() {
+  let mut parrot =
+    cvr::png::read_rgb8(std::fs::File::open("tests/images/bright-parrot-for-debayer.png").unwrap())
+      .unwrap();
+
+  let parrot_copy = parrot.clone();
+
+  let mut img = cvr::rgb::Image::<f32>::new();
+  parrot.to_linear(&mut img);
+
+  assert_eq!(img.height(), parrot.height());
+  assert_eq!(img.width(), parrot.width());
+
+  img.to_srgb(&mut parrot);
+
+  let output_img =
+    std::fs::File::create("tests/images/output/to-linear-and-to-srgb-roundtrip.png").unwrap();
+
+  cvr::png::write_rgb8(
+    output_img,
+    parrot.rgb_iter(),
+    parrot.width(),
+    parrot.height(),
+  )
+  .unwrap();
+
+  assert!(parrot == parrot_copy);
+}
